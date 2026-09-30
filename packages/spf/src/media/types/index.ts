@@ -41,6 +41,13 @@ export interface AddressableObject {
  */
 export interface MediaElementLike {
   preload: string;
+  /**
+   * DOM attribute-reflection surface, present on real elements. Where it exists, reflected IDL properties like
+   * `preload` report a browser-dependent UA default even when no attribute was authored — so consumers that need author
+   * intent must gate property reads on attribute presence. A non-DOM implementation may omit it; its properties carry
+   * no UA defaults and are authored by construction.
+   */
+  hasAttribute?(qualifiedName: string): boolean;
 }
 
 // =============================================================================
@@ -235,12 +242,20 @@ export type TextTrack = Track & {
  *
  * Takes the minimal codec-bearing shape both video and audio candidates carry. `mimeType` is optional so unprobeable
  * candidates (no MIME) can be passed straight through as playable rather than dropped.
+ *
+ * `config` is the composition's config, handed along by `excludeUnplayableTracks` so an extended probe can read the
+ * props it defines off it — `canPlayTrackWithDrm` reads `drm` and `keySystems` — through a cast, the way the selection
+ * rules read their own. Untyped here because the predicate composes into configs that share nothing else; a probe that
+ * needs nothing from it ignores it.
  */
-export type CanPlayTrack = (track: {
-  mimeType?: string;
-  codecs?: string[];
-  metadata?: Record<string, unknown>;
-}) => boolean;
+export type CanPlayTrack = (
+  track: {
+    mimeType?: string;
+    codecs?: string[];
+    metadata?: Record<string, unknown>;
+  },
+  config?: unknown
+) => boolean;
 
 /**
  * Minimal text-track cue shape — start time, end time, and display text.
@@ -387,6 +402,25 @@ export const SEGMENT_TIME_EPSILON = 0.0001;
 // =============================================================================
 
 /**
+ * One `#EXT-X-KEY` declaration whose `METHOD` isn't `NONE`, raw attribute values as authored. For Widevine and
+ * PlayReady, Mux carries a complete PSSH / PRO as a `data:` URI — the manifest-driven init-data source for EME session
+ * creation. `KEYFORMATVERSIONS` is deliberately not captured: nothing consumes it, and Mux emits the non-spec singular
+ * `KEYFORMATVERSION` anyway.
+ */
+export interface MediaPlaylistKey {
+  /** `METHOD` — e.g. `SAMPLE-AES`, `AES-128`. Never `NONE`. */
+  method: string;
+  /** `URI`, resolved against the playlist URL (absolute `data:` / `skd://` pass through). */
+  uri?: string;
+  /** `KEYFORMAT` — key-system identity; absent means `identity` per RFC 8216. */
+  keyFormat?: string;
+  /** `KEYID` — non-spec but common extension attribute, hex as authored (`0x…`). */
+  keyId?: string;
+  /** `IV` — hex as authored (`0x…`). */
+  iv?: string;
+}
+
+/**
  * Playlist-level metadata surfaced from a parsed media playlist. HLS delivery specifics — not part of the generic
  * CMAF-HAM model — so they live under `Ham.metadata` (read via `getMediaPlaylistMetadata`) rather than as first-class
  * `Track` fields:
@@ -409,13 +443,20 @@ export interface MediaPlaylistMetadata {
    * Deliberately _not_ a model-level `protection` shape. CMAF-HAM puts `protection` on `SwitchingSet`, but that can't
    * express two real cases: a clear lead (`METHOD=NONE` segments followed by encrypted ones — protection varies along
    * the timeline within one rendition) or key rotation (its single `defaultKid` can't represent a key changing over
-   * time). Modeling it properly belongs to DRM support; until then this records the one fact a playlist reliably gives
-   * us. Per-rendition because that's HLS's granularity — `EXT-X-KEY` is a media-playlist tag.
+   * time). The structured declarations live in `keys`; this remains the summary fact. Per-rendition because that's
+   * HLS's granularity — `EXT-X-KEY` is a media-playlist tag.
    *
    * Conservative for a clear lead: a rendition whose opening segments are clear still reads as encrypted, so it's
    * judged unplayable rather than played until it breaks.
    */
   encrypted?: boolean;
+  /**
+   * Structured `#EXT-X-KEY` declarations (`METHOD` ≠ `NONE`), deduped by full attribute identity (rotation-heavy
+   * playlists re-declare the same key before each segment run) and present only when the rendition carries any.
+   * `encrypted` derives from this list; see its note on why protection stays HLS-vocabulary metadata rather than a
+   * model-level `protection` shape.
+   */
+  keys?: readonly MediaPlaylistKey[];
   /**
    * `EXT-X-SERVER-CONTROL` `HOLD-BACK` (seconds) — the server's declared distance from the live edge for clients
    * playing _complete_ segments. Absent when the server doesn't advertise it, in which case the spec default (3 ×
@@ -443,6 +484,62 @@ export const MEDIA_PLAYLIST_METADATA_KEY = 'mediaPlaylist';
 /** Typed read of the media-playlist metadata stashed in `ham.metadata`. */
 export function getMediaPlaylistMetadata(ham: Pick<Ham, 'metadata'>): MediaPlaylistMetadata | undefined {
   return ham.metadata?.[MEDIA_PLAYLIST_METADATA_KEY] as MediaPlaylistMetadata | undefined;
+}
+
+// =============================================================================
+// Multivariant Playlist Metadata
+// =============================================================================
+
+/**
+ * One `#EXT-X-SESSION-DATA` tag from a multivariant playlist: arbitrary session-level data keyed by a reverse-DNS
+ * `DATA-ID`, carried either inline (`VALUE`) or by reference (`URI`). A playlist may repeat a `DATA-ID` with different
+ * `LANGUAGE`s, so entries are a list, not a map. The parser records what the tag says; fetching a `uri` is the business
+ * of whichever behavior recognizes the `DATA-ID` (e.g. `com.apple.hls.chapters`).
+ */
+export interface SessionDataEntry {
+  /** `DATA-ID` — identifies the datum (reverse-DNS by convention). */
+  dataId: string;
+  /** `VALUE` — the inline datum. A tag carries either `value` or `uri`, never both. */
+  value?: string;
+  /** `URI` — where the datum lives, fully resolved against the playlist URL. */
+  uri?: string;
+  /**
+   * `FORMAT` of the resource at `uri` — `JSON` (a JSON document, the default) or `RAW` (an opaque binary). Only present
+   * alongside `uri`; the spec says to ignore `FORMAT` on an inline `VALUE`.
+   */
+  format?: 'JSON' | 'RAW';
+  /** `LANGUAGE` — RFC 5646 tag for the language of `value`. */
+  language?: string;
+}
+
+/**
+ * Playlist-level metadata surfaced from a parsed multivariant playlist. Like {@link MediaPlaylistMetadata}, these are
+ * HLS delivery specifics with no CMAF-HAM counterpart, so they live under `Ham.metadata` (read via
+ * `getMultivariantPlaylistMetadata` / `getSessionData`) rather than as first-class `Presentation` fields.
+ */
+export interface MultivariantPlaylistMetadata {
+  /** Every `#EXT-X-SESSION-DATA` tag, in playlist order. */
+  sessionData: SessionDataEntry[];
+}
+
+/** Key under `Ham.metadata` where {@link MultivariantPlaylistMetadata} is stored. */
+export const MULTIVARIANT_PLAYLIST_METADATA_KEY = 'multivariantPlaylist';
+
+/** Typed read of the multivariant-playlist metadata stashed in `ham.metadata`. */
+export function getMultivariantPlaylistMetadata(ham: Pick<Ham, 'metadata'>): MultivariantPlaylistMetadata | undefined {
+  // SAFETY: `parseMultivariantPlaylist` is the only writer of this key, and it
+  // writes a `MultivariantPlaylistMetadata`.
+  return ham.metadata?.[MULTIVARIANT_PLAYLIST_METADATA_KEY] as MultivariantPlaylistMetadata | undefined;
+}
+
+/**
+ * The presentation's `#EXT-X-SESSION-DATA` entries, optionally narrowed to one `DATA-ID`. Empty when the playlist
+ * carried none, so consumers need no presence check.
+ */
+export function getSessionData(ham: Pick<Ham, 'metadata'>, dataId?: string): SessionDataEntry[] {
+  const entries = getMultivariantPlaylistMetadata(ham)?.sessionData ?? [];
+
+  return dataId === undefined ? entries : entries.filter((entry) => entry.dataId === dataId);
 }
 
 // =============================================================================

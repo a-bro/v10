@@ -1,7 +1,10 @@
 ---
 
 import clsx from 'clsx';
-import { Info, Lightbulb, OctagonX, TriangleAlert } from 'lucide-react';
+import AlertDiamond from '@/assets/icons/alert-diamond.svg?react';
+import Alert from '@/assets/icons/alert.svg?react';
+import Info from '@/assets/icons/info.svg?react';
+import Lightbulb from '@/assets/icons/lightbulb.svg?react';
 import { twMerge } from '@/utils/twMerge';
 
 type AsideType = 'note' | 'tip' | 'caution' | 'danger';
@@ -15,36 +18,42 @@ type Props = {
 const { type, title, class: className } = Astro.props;
 if (!['note', 'tip', 'caution', 'danger'].includes(type)) throw new Error(`Invalid aside type: ${type}`);
 
-const icons: Record<AsideType, typeof Info> = {
+const icons = {
   note: Info,
   tip: Lightbulb,
-  caution: TriangleAlert,
-  danger: OctagonX,
-};
+  caution: Alert,
+  danger: AlertDiamond,
+} satisfies Record<AsideType, typeof Info>;
 
-const defaultTitles: Record<AsideType, string> = {
+const defaultTitles = {
   note: 'Note',
   tip: 'Tip',
   caution: 'Caution',
   danger: 'Danger',
-};
+} satisfies Record<AsideType, string>;
 
 const Icon = icons[type];
 const renderTitle = title ?? defaultTitles[type];
 ---
 
 <aside
+  data-aside={type}
   class={twMerge(
     clsx(
-      "mx-auto my-8 flex w-full max-w-3xl overflow-hidden rounded-xs border border-manila-75 dark:border-warm-gray",
+      // A neutral inset ring sharpens light surfaces; dark mode picks up the callout's semantic colour.
+      "mx-auto my-8 flex w-full max-w-3xl overflow-hidden rounded-lg corner-squircle ring-1 ring-inset ring-black/10",
+      type === "note" && "dark:ring-info/40",
+      type === "tip" && "dark:ring-magenta/40",
+      type === "caution" && "dark:ring-orange/40",
+      type === "danger" && "dark:ring-red/40",
     ),
     className,
   )}
 >
   <div
     class={clsx(
-      "w-2 self-stretch",
-      type === "note" && "bg-magenta",
+      "w-1.5 shrink-0 self-stretch",
+      type === "note" && "bg-info",
       type === "tip" && "bg-magenta",
       type === "caution" && "bg-orange",
       type === "danger" && "bg-red",
@@ -52,12 +61,13 @@ const renderTitle = title ?? defaultTitles[type];
   >
   </div>
   <div class={clsx("flex flex-1 gap-4 p-4 pl-4")}>
-    <div class="mt-0.75 shrink-0">
+    <div class="mt-1 shrink-0">
       <Icon
-        size={18}
+        aria-hidden="true"
         className={clsx(
+          "size-4",
           clsx(
-            type === "note" && "text-magenta",
+            type === "note" && "text-info",
             type === "tip" && "text-magenta",
             type === "caution" && "text-orange",
             type === "danger" && "text-red",
@@ -66,8 +76,8 @@ const renderTitle = title ?? defaultTitles[type];
       />
     </div>
     <div class="min-w-0 flex-1">
-      <p class="mb-2 font-bold">{renderTitle}</p>
-      <div class="[&>*:last-child]:mb-0! [&>.my-4]:my-2 [&>.my-8]:my-4">
+      <p class="mb-2 font-semibold" data-aside-title>{renderTitle}</p>
+      <div class="[&>*:last-child]:mb-0! [&>.my-4]:my-2 [&>.my-8]:my-4" data-aside-body>
         <slot />
       </div>
     </div>

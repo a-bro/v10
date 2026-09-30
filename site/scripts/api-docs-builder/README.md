@@ -24,19 +24,20 @@ TypeScript Sources (core/html/media/react/store packages)
 
 ### Building
 
-The builder runs automatically before dev/build through the site's Vite+ tasks:
+The builder runs through the site's Vite+ tasks:
 
 ```bash
 # Run manually
 pnpm -F site api-docs
 
 # Runs automatically on:
-pnpm dev:site
 pnpm build:site
+pnpm dev                   # root dev, via dev:prepare
+pnpm dev:site --prepare    # or plain dev:site when the output is missing
 ```
 
 The manual command also runs the required package builds. `api-docs:generate` is
-the internal generation task used by Turbo after those dependencies are ready.
+the internal generation task Vite+ runs after those dependencies are ready.
 
 ### In MDX
 
@@ -112,6 +113,19 @@ All dependencies are in `site/package.json` devDependencies.
 Every collection is generated and schema-validated before output changes begin. The writer stages
 serialized files, rejects unsafe or duplicate filenames, and removes obsolete JSON after writing the
 current set. An unexpectedly empty collection fails generation instead of erasing existing output.
+
+## Display type hints
+
+When a conditional or runtime-derived type cannot be represented by the syntax-only formatter, add a `@displayType`
+tag to its alias. Braced type-parameter names are replaced with the reference's resolved arguments:
+
+```ts
+/** @displayType {Store}['state'] */
+export type InferStoreState<Store extends AnyStore> = Store extends { readonly state: infer State } ? State : never;
+```
+
+Keep the hint equivalent to the public meaning of the alias. It only controls API-reference display output and does not
+change the published TypeScript type.
 
 ## Acknowledgements
 

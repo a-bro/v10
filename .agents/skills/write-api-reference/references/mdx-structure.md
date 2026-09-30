@@ -1,6 +1,6 @@
 # MDX Structure
 
-Structure and conventions for API reference MDX pages at `site/src/content/docs/reference/`.
+Structure and conventions for API reference MDX pages at `site/src/content/docs/reference/components/` (components, skins, media, extensions) and `site/src/content/docs/reference/api/` (hooks, features, controllers, factories, utilities).
 
 ## Component Pages
 
@@ -12,12 +12,15 @@ title: MuteButton              # PascalCase component name
 frameworkTitle:
   html: media-mute-button      # HTML custom element tag name
 description: A button component for muting and unmuting audio playback
+stability: unstable              # Optional; marks an API whose shape may still change
 ---
 ```
 
 - `title`: PascalCase React component name
 - `frameworkTitle.html`: The `static tagName` from the HTML element file
 - `description`: One-line description of the component
+- `stability`: Optional API maturity. Use `unstable` when the API works but its shape may still change; the site adds
+  the badge and an explanatory note to the page.
 
 ### Page Structure
 
@@ -244,18 +247,18 @@ Link generously between related reference pages.
 Same-framework or cross-framework link:
 
 ```mdx
-Within a `Player`, <DocsLink slug="reference/use-player">`usePlayer`</DocsLink> is usually simpler.
+Within a `Player`, <DocsLink slug="reference/api/use-player">`usePlayer`</DocsLink> is usually simpler.
 ```
 
 Selector page linking to framework-specific utils:
 
 ```mdx
 <FrameworkCase frameworks={["react"]}>
-Pass `selectPlayback` to <DocsLink slug="reference/use-player">`usePlayer`</DocsLink> to subscribe.
+Pass `selectPlayback` to <DocsLink slug="reference/api/use-player">`usePlayer`</DocsLink> to subscribe.
 </FrameworkCase>
 
 <FrameworkCase frameworks={["html"]}>
-Pass `selectPlayback` to <DocsLink slug="reference/player-controller">`PlayerController`</DocsLink> to subscribe.
+Pass `selectPlayback` to <DocsLink slug="reference/api/player-controller">`PlayerController`</DocsLink> to subscribe.
 </FrameworkCase>
 ```
 
@@ -353,10 +356,10 @@ Add to `site/src/docs.config.ts` in the appropriate section, alphabetically:
   sidebarLabel: 'Components',
   contents: [
     // sorted alphabetically
-    { slug: 'reference/buffering-indicator' },
-    { slug: 'reference/controls' },
+    { slug: 'reference/components/buffering-indicator' },
+    { slug: 'reference/components/controls' },
     // ...
-    { slug: 'reference/{name}' },  // <-- insert alphabetically
+    { slug: 'reference/components/{name}' },  // <-- insert alphabetically
     // ...
   ],
 },

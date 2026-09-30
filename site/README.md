@@ -46,17 +46,18 @@ Mostly a standard [Astro](https://astro.build/) project.
 
 If you're in the monorepo's root...
 
-| Command           | Action                                      |
-| :---------------- | :------------------------------------------ |
-| `pnpm dev:site`   | Starts local dev server at `localhost:4321` |
-| `pnpm build:site` | Build the production site to `site/dist/`   |
+| Command                   | Action                                                                                                                                  |
+| :------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev:site`           | Starts local dev server at `localhost:4321`; generates API references and package builds only when they are missing |
+| `pnpm dev:site --prepare` | Same, but regenerates API references and rebuilds packages first (after changing package source or JSDoc)                            |
+| `pnpm build:site`         | Build the production site to `site/dist/`                                                                                            |
 
 If you're in `site/`...
 
 | Command              | Action                                           |
 | :------------------- | :----------------------------------------------- |
 | `pnpm install`       | Installs dependencies                            |
-| `pnpm exec vp run dev`   | Starts local dev server at `localhost:4321`  |
+| `pnpm exec vp run dev`   | Starts local dev server at `localhost:4321` (expects generated content; run `pnpm exec vp run dev:prepare` first) |
 | `pnpm exec vp run build` | Build your production site to `./dist/`      |
 | `pnpm astro preview`     | Preview your build locally, before deploying |
 | `pnpm api-docs`      | Regenerate API reference JSON from TypeScript    |
@@ -77,7 +78,7 @@ The site deploys via Netlify from two branches:
 
 On each release, the CD workflow force-pushes `main` to `site/v10`, keeping production docs in sync with published packages.
 
-**Changelog prose** arrives too late for that force-push. The prose bot only starts once the release is published, so its PR lands on `main` after production has already moved. The [Forward-port changelog](../.github/workflows/forward-port-changelog.yml) workflow closes the gap: whenever anything under `src/content/changelog/` changes on `main`, it copies that folder onto `site/v10`. No cherry-pick needed.
+**Changelog prose and blog posts** arrive between releases. The prose bot only starts once the release is published, so its PR lands on `main` after production has already moved, and blog posts merge whenever they are ready. The [Forward-port changelog and blog](../.github/workflows/forward-port-changelog.yml) workflow closes the gap: whenever `src/content/changelog/`, `src/content/blog/`, `src/assets/blog/`, or `src/content/authors.json` changes on `main`, it copies the changed paths onto `site/v10`. No cherry-pick needed. A blog post that merges before it should be public needs `devOnly: true` in its frontmatter, and a post that imports a component new to `main` needs the cherry-pick route below instead, since only those paths are copied.
 
 **Fixing a typo without cutting a release:** Land the fix on `main` first, then cherry-pick to `site/v10`. The next release's force-push already includes the fix (since it came from `main`), so nothing gets lost. Treat `site/v10` as bot-owned — it is rewritten from `main` on every release, so anything pushed there that isn't also on `main` disappears at the next cut.
 
@@ -115,14 +116,15 @@ The only weird thing about the blog? Blog posts use date-prefixed filenames: `YY
 
 ### Guides
 
-You'll learn most of what you need to know about writing guides by reading [`src/content/docs/how-to/write-guides.mdx`](src/content/docs/how-to/write-guides.mdx).
+You'll learn most of what you need to know about writing guides by reading [`src/content/docs/writing-style/write-guides.mdx`](src/content/docs/writing-style/write-guides.mdx).
 
 High-level primer?
 
 - Guides are written in MDX and stored in `src/content/docs/`
 - Guides are separated into how-to guides (focused on an outcome) and concept guides (focused on understanding) according to the [Diataxis](https://diataxis.fr) framework.
 - Astro's [Content Collections API](https://docs.astro.build/en/guides/content-collections/) transforms the MDX into data
-- That data is rendered in `src/pages/docs/framework/[framework]/[...slug].astro`
+- That data is rendered by `src/pages/docs/framework/[framework]/[...slug].astro`; the canonical installation routes
+  use `src/pages/docs/guides/installation/[framework].astro`
 - Standard MDX typography is defined in `src/components/typography/`
 
 It's also worth pausing and explaining one big quirk of our docs...
@@ -133,14 +135,17 @@ We want docs to feel idiomatic, no matter your framework or styling preference. 
 
 We currently support two frameworks (HTML, React) and one styling approach (CSS). This is defined in [types/docs.ts](src/types/docs.ts).
 
-Every doc generates a route per framework. E.g., `how-to/installation.mdx` becomes:
+Most docs generate a route per framework. For example, `guides/architecture.mdx` becomes:
 
-- `/docs/framework/html/how-to/installation/`
-- `/docs/framework/react/how-to/installation/`
+- `/docs/framework/html/guides/architecture/`
+- `/docs/framework/react/guides/architecture/`
+
+Installation is the entry point readers search for by framework and method, so its six pages use canonical routes under
+`/docs/guides/installation/`: React, HTML, Vue, Svelte, Shadcn, and CDN.
 
 Content that applies to only certain frameworks or styles can be restricted in two ways:
 
-1. Within the MDX content itself, by wrapping framework- or style-specific content in `<FrameworkCase>` or `<StyleCase>` components. (Read more about these components in [`src/content/docs/how-to/write-guides.mdx`](src/content/docs/how-to/write-guides.mdx).)
+1. Within the MDX content itself, by wrapping framework- or style-specific content in `<FrameworkCase>` or `<StyleCase>` components. (Read more about these components in [`src/content/docs/writing-style/write-guides.mdx`](src/content/docs/writing-style/write-guides.mdx).)
 2. In the sidebar config ([docs.config.ts](src/docs.config.ts)), by specifying `frameworks` on a per-guide basis, e.g.,
 
 ```ts
@@ -148,9 +153,9 @@ const sidebar: Sidebar = [
   {
     sidebarLabel: "Getting started",
     contents: [
-      { slug: "how-to/installation" }, // Available to all
+      { slug: "guides/installation" }, // Available to all
       {
-        slug: "how-to/react-hooks",
+        slug: "guides/react-hooks",
         frameworks: ["react"], // Only for React
       },
     ],
@@ -192,6 +197,19 @@ Search is powered by [Algolia DocSearch v4](https://docsearch.algolia.com). Conf
 
 One custom Astro integration in `integrations/`:
 
-- **llms-markdown** — Generates LLM-optimized `.md` files and `llms.txt` index from `[data-llms-content]` elements
+- **llms-markdown** — Generates LLM-optimized `.md` files and `llms.txt` indexes from `[data-llms-content]` elements
 
 Read [`integrations/llms-markdown.ts`](integrations/llms-markdown.ts) for implementation details.
+
+### Markdown delivery
+
+Every generated page has a static `.md` twin. Netlify serves those files directly, with the Markdown headers the
+build writes to `_headers`, and the edge functions in [`netlify/edge-functions/`](netlify/edge-functions/) negotiate
+`Accept: text/markdown` on the HTML routes. Installation twins are the exception to the otherwise static response: the
+shared renderer in `@videojs/installation` validates their query parameters and replaces the generated installation
+section at the edge.
+The same renderer powers the `npx @videojs/cli agents init` command and the docs bundled with `@videojs/react` and
+`@videojs/html`.
+
+Edge functions resolve workspace packages through [`netlify/edge-functions/import_map.json`](netlify/edge-functions/import_map.json).
+Keep that map in sync when an edge handler adds or moves a workspace import.

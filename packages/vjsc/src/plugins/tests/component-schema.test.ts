@@ -6,9 +6,9 @@ import { rolldown } from 'rolldown';
 import { build } from 'vite-plus/pack';
 import { describe, expect, it } from 'vite-plus/test';
 
-import { componentSchemaPlugin } from '..';
+import { vjscComponentSchemaPlugin } from '..';
 
-describe('componentSchemaPlugin', () => {
+describe('vjscComponentSchemaPlugin', () => {
   it('creates a schema entry directly from inline bundler configuration', async () => {
     const root = mkdtempSync(join(tmpdir(), 'vjsc-component-schema-plugin-'));
     const sourceDir = join(root, 'play-button');
@@ -21,7 +21,7 @@ describe('componentSchemaPlugin', () => {
       source,
       `const defineComponent: any = (value: any) => value; export default defineComponent({ name: 'PlayButton' });`
     );
-    const plugin = componentSchemaPlugin({
+    const plugin = vjscComponentSchemaPlugin({
       source: '@fixture/components',
       include: ['./*/*-component.ts'],
     });
@@ -53,7 +53,7 @@ describe('componentSchemaPlugin', () => {
       join(sourceDir, 'play-button-component.d.ts'),
       `declare const manifest: { name: 'PlayButton' }; export default manifest;`
     );
-    const plugin = componentSchemaPlugin({
+    const plugin = vjscComponentSchemaPlugin({
       file: 'schema',
       declaration: true,
       source: '@fixture/components',
@@ -65,7 +65,7 @@ describe('componentSchemaPlugin', () => {
       format: 'es',
       platform: 'neutral',
       dts: {
-        tsgo: true,
+        generator: 'tsgo',
         tsconfig: join(process.cwd(), 'tsconfig.json'),
         entry: ['does-not-match.ts'],
       },
@@ -77,7 +77,9 @@ describe('componentSchemaPlugin', () => {
       clean: false,
       report: false,
     });
-    const declaration = results[0]?.chunks.find((chunk) => /\.d\.[cm]?ts$/.test(chunk.fileName));
+    const declaration = results.bundles
+      .flatMap((bundle) => bundle.chunks)
+      .find((chunk) => /\.d\.[cm]?ts$/.test(chunk.fileName));
     if (declaration?.type !== 'chunk') throw new Error('The host build did not emit the schema declaration');
 
     expect(declaration.code).toContain('declare const PlayButton');

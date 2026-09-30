@@ -4,16 +4,19 @@
  * Validates that manually-maintained lists across config files stay in sync with the actual package structure. Run via
  * `pnpm check:workspace`.
  *
- * Checks: 1. CI test coverage — every testable package is tested in CI 2. Commitlint scopes — every package dir is a
- * valid commit scope 3. Root tsconfig references — every composite project is referenced 4. Package metadata —
- * non-private packages have required fields 5. Release-please config — every versioned package is registered 6. Bundled
- * docs — package publishing wires include generated docs 7. Define imports — no bare side-effect imports from relative
- * paths 8. i18n locales — tag lists match locale files and generated stubs 9. Agent context — portable skill metadata,
- * compatibility imports, and budgets 10. Internal records — organized design docs, frontmatter, and lifecycle status
+ * Checks CI test coverage, commitlint scopes, root tsconfig references, package metadata, release configuration,
+ * bundled docs, relative side-effect imports, i18n locales, agent context, internal records, and optional mise tool
+ * pins.
  */
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import {
+  discoverWorkspacePackages,
+  isMainCiTestPackage,
+  SPECIAL_TEST_PACKAGES,
+} from '../../.github/scripts/package-test-matrix.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const PACKAGES_DIR = join(ROOT, 'packages');
@@ -32,11 +35,34 @@ function readJson(path) {
   return JSON.parse(stripped);
 }
 
-/** Lists package directory names that contain a package.json. */
+/**
+ * Lists package directories relative to `packages/`, e.g. `core` or `adapters/mux-video`. A direct child without a
+ * package.json is treated as a bucket and its children are listed instead.
+ */
 function getPackageDirs() {
-  return readdirSync(PACKAGES_DIR, { withFileTypes: true })
-    .filter((d) => d.isDirectory() && existsSync(join(PACKAGES_DIR, d.name, 'package.json')))
-    .map((d) => d.name);
+  const dirs = [];
+
+  for (const entry of readdirSync(PACKAGES_DIR, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+
+    if (existsSync(join(PACKAGES_DIR, entry.name, 'package.json'))) {
+      dirs.push(entry.name);
+      continue;
+    }
+
+    for (const child of readdirSync(join(PACKAGES_DIR, entry.name), { withFileTypes: true })) {
+      if (child.isDirectory() && existsSync(join(PACKAGES_DIR, entry.name, child.name, 'package.json'))) {
+        dirs.push(`${entry.name}/${child.name}`);
+      }
+    }
+  }
+
+  return dirs;
+}
+
+/** The package's own directory name, without any bucket prefix. */
+function packageDirName(dir) {
+  return dir.slice(dir.lastIndexOf('/') + 1);
 }
 
 function readPackageJson(dir) {
@@ -48,14 +74,15 @@ function readPackageJson(dir) {
 function checkCiTestCoverage() {
   const warnings = [];
   const ciText = readText(join(ROOT, '.github/workflows/ci.yml'));
-
-  // Collect package names from the test matrix.
-  const matrixMatch = ciText.match(/matrix:\s*\n\s*package:\s*\n((?:\s*-\s*'[^']+'\s*\n)+)/);
   const testedInCi = new Set();
+  const hasDynamicPackageTests =
+    ciText.includes('node .github/scripts/package-test-matrix.js') &&
+    ciText.includes('matrix.packages') &&
+    ciText.includes('test:ci');
 
-  if (matrixMatch) {
-    for (const m of matrixMatch[1].matchAll(/'([^']+)'/g)) {
-      testedInCi.add(m[1]);
+  if (hasDynamicPackageTests) {
+    for (const pkg of discoverWorkspacePackages(ROOT)) {
+      if (isMainCiTestPackage(pkg) && !SPECIAL_TEST_PACKAGES.has(pkg.name)) testedInCi.add(pkg.name);
     }
   }
 
@@ -94,7 +121,8 @@ function checkCommitlintScopes() {
   const scopes = new Set([...match[1].matchAll(/'([^']+)'/g)].map((m) => m[1]));
 
   for (const dir of getPackageDirs()) {
-    const scope = SCOPE_ALIASES.get(dir) ?? dir;
+    const name = packageDirName(dir);
+    const scope = SCOPE_ALIASES.get(name) ?? name;
 
     if (!scopes.has(scope)) {
       warnings.push(`Package dir "${dir}" missing from commitlint scope-enum (expected scope: "${scope}")`);
@@ -168,8 +196,35 @@ const REQUIRED_FIELDS = ['sideEffects', 'files', 'exports'];
 /** Required only when the package has a root "." export. */
 const ROOT_EXPORT_FIELDS = ['main', 'module', 'types'];
 
-/** Packages excluded from metadata checks. CLI is bin-only — sideEffects/exports don't apply. */
-const METADATA_EXCLUDE = new Set(['cli']);
+/** The only package that publishes an executable. It is bin-only, so library fields don't apply. */
+const CLI_PACKAGE_DIR = 'cli';
+
+/**
+ * `npx @videojs/cli` runs the package's only bin, which installs globally as `videojs`, and every cold run downloads
+ * its dependencies, so the CLI stays one bundled file with no runtime dependencies.
+ */
+function cliMetadataWarnings(pkg) {
+  const warnings = [];
+
+  if (
+    JSON.stringify(Object.keys(pkg.bin ?? {})) !== JSON.stringify(['videojs']) ||
+    typeof pkg.bin.videojs !== 'string'
+  ) {
+    warnings.push(`${pkg.name}: "bin" should be { "videojs": "<path>" } so \`npx ${pkg.name}\` runs its only command`);
+  }
+
+  if (JSON.stringify(pkg.files) !== JSON.stringify(['dist'])) {
+    warnings.push(`${pkg.name}: "files" should be ["dist"]`);
+  }
+
+  for (const field of ['dependencies', 'peerDependencies', 'optionalDependencies']) {
+    if (Object.keys(pkg[field] ?? {}).length > 0) {
+      warnings.push(`${pkg.name}: "${field}" should be empty; bundle workspace code into the bin instead`);
+    }
+  }
+
+  return warnings;
+}
 
 function checkPackageMetadata() {
   const warnings = [];
@@ -179,12 +234,17 @@ function checkPackageMetadata() {
     // Skip private packages — they're internal.
     if (pkg.private) continue;
 
-    // Skip packages that don't need library metadata.
-    if (METADATA_EXCLUDE.has(dir)) continue;
-
-    // publishConfig.access is required for scoped public packages.
     if (pkg.publishConfig?.access !== 'public') {
       warnings.push(`${pkg.name}: missing publishConfig.access = "public"`);
+    }
+
+    if (dir === CLI_PACKAGE_DIR) {
+      warnings.push(...cliMetadataWarnings(pkg));
+      continue;
+    }
+
+    if (pkg.bin !== undefined) {
+      warnings.push(`${pkg.name}: remove "bin"; command line tools ship in @videojs/cli`);
     }
 
     for (const field of REQUIRED_FIELDS) {
@@ -262,23 +322,16 @@ function checkBundledDocs() {
     }
   }
 
-  const cli = readPackageJson('cli');
-  const expectedCliCopy = 'node --import tsx ../../site/scripts/copy-package-docs.ts cli';
-
-  if (cli.scripts?.['copy-docs'] !== expectedCliCopy) {
-    warnings.push(`${cli.name}: copy-docs script should be \`${expectedCliCopy}\``);
-  }
-
   return { ok: warnings.length === 0, warnings };
 }
 
-// ── Check 7: Define imports ──────────────────────────────────────────────────
+// ── Check 8: Define imports ──────────────────────────────────────────────────
 
 /**
- * Preset and UI define modules are side-effect-only registration entrypoints. Media define modules retain their
- * existing element exports for compatibility. Bare side-effect imports from relative paths can cause non-deterministic
- * registration order when loaded as native ESM in the browser, so registration must go through explicit safeDefine()
- * calls.
+ * Preset and UI define modules are side-effect-only registration entrypoints. Media and extension define modules retain
+ * their existing element exports for compatibility. Bare side-effect imports from relative paths can cause
+ * non-deterministic registration order when loaded as native ESM in the browser, so registration must go through
+ * explicit safeDefine() calls.
  */
 function checkDefineImports() {
   const warnings = [];
@@ -311,9 +364,11 @@ function checkDefineImports() {
     const content = readText(filePath);
     const relative = filePath.slice(ROOT.length + 1);
 
-    const isMediaDefine = relative.startsWith('packages/html/src/define/media/');
+    const exportsElement =
+      relative.startsWith('packages/html/src/define/media/') ||
+      relative.startsWith('packages/html/src/define/extensions/');
 
-    if (!isMediaDefine && /^\s*export\b/m.test(content)) {
+    if (!exportsElement && /^\s*export\b/m.test(content)) {
       warnings.push(`${relative}: define modules are registration-only and must not export values or types`);
     }
 
@@ -884,6 +939,60 @@ function checkInternalRecords() {
   return { ok: warnings.length === 0, warnings };
 }
 
+// ── Check 11: mise tool pins ────────────────────────────────────────────────
+
+/** Returns the body of a top-level TOML table, or null when it is absent. */
+function tomlTable(text, name) {
+  const lines = text.split(/\r?\n/);
+  const start = lines.findIndex((line) => line.trim() === `[${name}]`);
+  if (start === -1) return null;
+
+  const body = lines.slice(start + 1);
+  const end = body.findIndex((line) => /^\s*\[/.test(line));
+
+  return (end === -1 ? body : body.slice(0, end)).join('\n');
+}
+
+/**
+ * `mise.toml` is optional contributor convenience, so this check is a no-op without it. When present, its pnpm pin must
+ * match `packageManager` — mise users would otherwise silently run a different pnpm than CI. Node stays out of
+ * `[tools]` on purpose: mise reads `.nvmrc`/`.node-version`, keeping one Node pin shared with nvm, Volta, and
+ * `actions/setup-node`.
+ */
+function checkMiseToolPins() {
+  const warnings = [];
+  const misePath = join(ROOT, 'mise.toml');
+  if (!existsSync(misePath)) return { ok: true, warnings };
+
+  const miseText = readText(misePath);
+  const tools = tomlTable(miseText, 'tools');
+  const settings = tomlTable(miseText, 'settings');
+
+  const expected = readJson(join(ROOT, 'package.json')).packageManager?.match(/^pnpm@(.+)$/)?.[1];
+  const pinned = tools?.match(/^\s*pnpm\s*=\s*["']([^"']+)["']/m)?.[1];
+
+  if (!expected) {
+    warnings.push('package.json: "packageManager" must pin a pnpm version');
+  } else if (pinned !== expected) {
+    warnings.push(
+      `mise.toml: [tools] pnpm should be "${expected}" to match packageManager (got: ${pinned ?? 'missing'})`
+    );
+  }
+
+  if (tools && /^\s*node\s*=/m.test(tools)) {
+    warnings.push(
+      'mise.toml: drop the [tools] node pin — .nvmrc/.node-version is the single Node pin shared with nvm, Volta, and CI'
+    );
+  }
+
+  // Without the opt-in, mise ignores the Node version files and pins no Node.
+  if (!/^\s*idiomatic_version_file_enable_tools\s*=\s*\[[^\]]*["']node["']/m.test(settings ?? '')) {
+    warnings.push('mise.toml: [settings] idiomatic_version_file_enable_tools must include "node" so .nvmrc is honored');
+  }
+
+  return { ok: warnings.length === 0, warnings };
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────
 
 const checks = [
@@ -897,6 +1006,7 @@ const checks = [
   { name: 'i18n locales', fn: checkI18nLocales },
   { name: 'Agent context', fn: checkAgentContext },
   { name: 'Internal records', fn: checkInternalRecords },
+  { name: 'mise tool pins', fn: checkMiseToolPins },
 ];
 
 let failed = 0;

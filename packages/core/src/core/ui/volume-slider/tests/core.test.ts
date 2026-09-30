@@ -23,7 +23,7 @@ function createMediaState(overrides: Partial<MediaVolumeState> = {}): MediaVolum
     volumeAvailability: 'available',
     mutedAvailability: 'available',
     setVolume: vi.fn((v: number) => v),
-    toggleMuted: vi.fn(() => false),
+    setMuted: vi.fn((muted: boolean) => muted),
     ...overrides,
   };
 }
@@ -33,7 +33,7 @@ describe('VolumeSliderCore', () => {
     it('has expected defaults', () => {
       expect(VolumeSliderCore.defaultProps).toEqual({
         label: '',
-        step: 1,
+        step: 5,
         largeStep: 10,
         wheelStep: 5,
         orientation: 'horizontal',

@@ -5,9 +5,9 @@ import type {
   LiveVideoPlayerStore,
   VideoPlayerStore,
 } from '@videojs/core/dom';
-import { assertType, describe, it } from 'vitest';
+import { assertType, describe, it } from 'vite-plus/test';
 
-import type { PlayerController as PlayerControllerInstance } from '../../player/player-controller';
+import type { PlayerController as PlayerControllerInstance } from '../../player/controller';
 import type { UIElement } from '../../ui/ui-element';
 import { PlayerController as AudioPlayerController } from '../audio';
 import { PlayerController as BackgroundPlayerController } from '../background';

@@ -81,18 +81,56 @@ function getCommonTemplateHTML(tag: string) {
 
 const excludedProperties = ['attach', 'detach', 'destroy'];
 
-export interface MediaHost extends EventTarget {
+/** How a property declares the content attribute that drives it. */
+type PropertyConfig = { type: any; attribute?: string; empty?: unknown };
+type PropertyConfigs = Record<string, PropertyConfig>;
+
+/**
+ * The content attribute a property is driven by.
+ *
+ * Attributes HTML already defines are squashed lowercase (`playsInline` -> `playsinline`), while the custom ones are
+ * kebab-case (`streamType` -> `stream-type`) and name themselves through `attribute`. Undeclared properties are this
+ * library's own, so they take kebab-case too.
+ */
+function attributeName(prop: string, properties: PropertyConfigs): string {
+  const config = properties[prop];
+
+  return config ? (config.attribute ?? prop.toLowerCase()) : kebabCase(prop);
+}
+
+/**
+ * Whether a property's declared attribute is really another property's.
+ *
+ * For example: `defaultMuted` declares `attribute: 'muted'`, but `muted` is a property in its own right and owns that
+ * attribute, so the alias defers to it.
+ */
+function isAttributeAlias(prop: string, properties: PropertyConfigs, hostPrototype: object): boolean {
+  const { attribute } = properties[prop] ?? {};
+
+  return !!attribute && attribute in hostPrototype;
+}
+
+/** Coerce an attribute string to the type the adapter property already holds. */
+function propertyValueFor(attrValue: string | null, current: unknown, config?: PropertyConfig): unknown {
+  if (typeof current === 'boolean') return attrValue !== null;
+
+  if (typeof current === 'number') return Number(attrValue);
+
+  return attrValue ?? (config && 'empty' in config ? config.empty : '');
+}
+
+export interface PlaybackAdapter extends EventTarget {
   attach(target: EventTarget | null): void;
   detach(): void;
   destroy(): void;
-  /** Index signature for dynamic property forwarding (includes the host's protected `target`). */
+  /** Index signature for dynamic property forwarding (includes the adapter's protected `target`). */
   [key: string]: any;
 }
 
-type CustomMediaConstructor<T extends Constructor<MediaHost>> = Constructor<
+export type CustomMediaConstructor<T extends Constructor<PlaybackAdapter>> = Constructor<
   HTMLElement &
     InstanceType<T> & {
-      readonly host: InstanceType<T>;
+      readonly adapter: InstanceType<T>;
       attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     }
 > & {
@@ -102,9 +140,9 @@ type CustomMediaConstructor<T extends Constructor<MediaHost>> = Constructor<
   readonly observedAttributes: string[];
 };
 
-export function CustomMediaElement<T extends Constructor<MediaHost>>(
+export function CustomMediaElement<T extends Constructor<PlaybackAdapter>>(
   tag: string,
-  MediaHost: T
+  PlaybackAdapter: T
 ): CustomMediaConstructor<T> {
   // Embed hosts (iframe) drive an external player rather than a native media
   // element, so attribute changes are not mirrored onto the iframe target and
@@ -121,7 +159,7 @@ export function CustomMediaElement<T extends Constructor<MediaHost>>(
       autoplay: { type: Boolean },
       controls: { type: Boolean },
       controlsList: { type: String },
-      crossOrigin: { type: String },
+      crossOrigin: { type: String, empty: null },
       defaultMuted: { type: Boolean, attribute: 'muted' },
       disablePictureInPicture: { type: Boolean },
       disableRemotePlayback: { type: Boolean },
@@ -148,20 +186,19 @@ export function CustomMediaElement<T extends Constructor<MediaHost>>(
 
       isDefined = true;
 
-      const properties = ctor.properties as Record<string, { type: any; attribute?: string; empty?: unknown }>;
+      const properties = ctor.properties as PropertyConfigs;
 
-      for (let proto = MediaHost.prototype; proto && proto !== Object.prototype; proto = Object.getPrototypeOf(proto)) {
+      for (
+        let proto = PlaybackAdapter.prototype;
+        proto && proto !== Object.prototype;
+        proto = Object.getPrototypeOf(proto)
+      ) {
         for (const prop of Object.getOwnPropertyNames(proto)) {
           if (prop in CustomMedia.prototype || excludedProperties.includes(prop)) continue;
 
-          // Defer to the explicit `ctor.properties` loop when its attribute
-          // mapping diverges from `kebabCase(prop)`. Covers multi-word camelCase
-          // props (`playsInline` → `'playsinline'`) and explicit overrides
-          // (`defaultMuted` → `attribute: 'muted'`). Single-word props in
-          // `properties` (like `loop`, `preload`) keep their legacy proto-walk
-          // path so the mediaHost still receives the setter call.
-          const propConfig = properties[prop];
-          if (propConfig && (propConfig.attribute ?? prop.toLowerCase()) !== kebabCase(prop)) continue;
+          // An alias keeps reflecting its attribute through the `properties`
+          // loop below rather than reaching the adapter.
+          if (isAttributeAlias(prop, properties, PlaybackAdapter.prototype)) continue;
 
           const descriptor = Object.getOwnPropertyDescriptor(proto, prop);
           if (!descriptor) continue;
@@ -181,7 +218,7 @@ export function CustomMediaElement<T extends Constructor<MediaHost>>(
             };
 
             if (descriptor.set) {
-              const attr = kebabCase(prop);
+              const attr = attributeName(prop, properties);
 
               if (ctor.observedAttributes.includes(attr)) {
                 mediaHostAttrToProp.set(attr, prop);
@@ -227,7 +264,7 @@ export function CustomMediaElement<T extends Constructor<MediaHost>>(
       }
     }
 
-    #mediaHost: MediaHost;
+    #mediaHost: PlaybackAdapter;
     #bridgedEventTypes = new Set<string>();
     #childMap = new Map<HTMLTrackElement | HTMLSourceElement, HTMLTrackElement | HTMLSourceElement>();
     #childObserver?: MutationObserver;
@@ -243,7 +280,7 @@ export function CustomMediaElement<T extends Constructor<MediaHost>>(
         const allowedKeys = getAttrsFromProps(ctor.properties);
         const disallowedKeys = [...mediaHostAttrToProp.keys()];
         const pickedAttrs = pick(namedNodeMapToObject(this.attributes), allowedKeys);
-        // Embed templates (iframe) need host-bound attrs (e.g. `src`) to build the initial URL.
+        // Embed templates (iframe) need adapter-bound attrs (e.g. `src`) to build the initial URL.
         const attrs: Record<string, string> = syncTargetAttributes ? omit(pickedAttrs, disallowedKeys) : pickedAttrs;
 
         if (tag && !attrs.part) attrs.part = tag;
@@ -251,7 +288,7 @@ export function CustomMediaElement<T extends Constructor<MediaHost>>(
         this.shadowRoot!.innerHTML = ctor.getTemplateHTML(attrs);
       }
 
-      this.#mediaHost = new MediaHost();
+      this.#mediaHost = new PlaybackAdapter();
       this.#attachToTarget();
 
       this.#childObserver = new MutationObserver(this.#syncMediaChildAttribute.bind(this));
@@ -272,7 +309,7 @@ export function CustomMediaElement<T extends Constructor<MediaHost>>(
       this.#mediaHost.attach(target);
     }
 
-    get host(): MediaHost {
+    get adapter(): PlaybackAdapter {
       return this.#mediaHost;
     }
 
@@ -298,7 +335,7 @@ export function CustomMediaElement<T extends Constructor<MediaHost>>(
       if (this.hasAttribute('keep-alive')) return;
 
       // Defer so a synchronous reparent (remove + insert) doesn't tear down
-      // the host and its registered components.
+      // the adapter and its registered components.
       queueMicrotask(() => {
         if (!this.isConnected) this.#mediaHost.destroy();
       });
@@ -336,16 +373,9 @@ export function CustomMediaElement<T extends Constructor<MediaHost>>(
 
       if (prop) {
         if (oldValue !== newValue) {
-          const valueType = typeof this.#mediaHost[prop];
           const propConfig = (this.constructor as CustomMediaConstructor<T>).properties[prop];
-          const emptyValue = propConfig && 'empty' in propConfig ? propConfig.empty : '';
 
-          this.#mediaHost[prop] =
-            valueType === 'boolean'
-              ? newValue !== null
-              : valueType === 'number'
-                ? Number(newValue)
-                : (newValue ?? emptyValue);
+          this.#mediaHost[prop] = propertyValueFor(newValue, this.#mediaHost[prop], propConfig);
         }
 
         return;
@@ -436,6 +466,6 @@ export function CustomMediaElement<T extends Constructor<MediaHost>>(
   return CustomMedia as any;
 }
 
-function getAttrsFromProps(props: Record<string, any>): string[] {
-  return Object.keys(props).map((prop) => props[prop]?.attribute ?? prop.toLowerCase());
+function getAttrsFromProps(props: PropertyConfigs): string[] {
+  return Object.keys(props).map((prop) => attributeName(prop, props));
 }

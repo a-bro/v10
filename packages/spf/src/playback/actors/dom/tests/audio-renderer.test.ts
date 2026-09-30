@@ -345,12 +345,12 @@ describe('createAudioRendererActor', () => {
     const drained = new Promise<void>((resolve) => {
       finishDrain = resolve;
     });
-    const pendingFlush = vi
-      .spyOn(AudioDecoder.prototype, 'flush')
-      .mockImplementation(async function (this: AudioDecoder) {
-        await flush.call(this);
-        await drained;
-      });
+    const pendingFlush = vi.spyOn(AudioDecoder.prototype, 'flush').mockImplementation(async function (
+      this: AudioDecoder
+    ) {
+      await flush.call(this);
+      await drained;
+    });
     const renderer = createAudioRendererActor({ audioContext });
 
     try {

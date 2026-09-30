@@ -38,6 +38,66 @@ describe('playbackFeature', () => {
       expect(store.state.waiting).toBe(true);
     });
 
+    it('clears waiting once currentTime advances below HAVE_FUTURE_DATA', () => {
+      const video = createMockVideo({
+        paused: false,
+        readyState: HTMLMediaElement.HAVE_CURRENT_DATA,
+        currentTime: 0,
+      });
+
+      const store = createStore<PlayerTarget>()(playbackFeature);
+
+      store.attach({ media: video, container: null });
+
+      expect(store.state.waiting).toBe(true);
+
+      // Safari holds HAVE_CURRENT_DATA for the whole of some MSE streams, so a
+      // presented frame is the only evidence that playback ever recovered.
+      video.currentTime = 0.5;
+      video.dispatchEvent(new Event('timeupdate'));
+
+      expect(store.state.waiting).toBe(false);
+    });
+
+    it('keeps waiting while currentTime does not advance', () => {
+      const video = createMockVideo({
+        paused: false,
+        readyState: HTMLMediaElement.HAVE_CURRENT_DATA,
+        currentTime: 4,
+      });
+
+      const store = createStore<PlayerTarget>()(playbackFeature);
+
+      store.attach({ media: video, container: null });
+
+      video.dispatchEvent(new Event('timeupdate'));
+
+      expect(store.state.waiting).toBe(true);
+    });
+
+    it('restores waiting when the browser reports starvation again', () => {
+      const video = createMockVideo({
+        paused: false,
+        readyState: HTMLMediaElement.HAVE_CURRENT_DATA,
+        currentTime: 0,
+      });
+
+      const store = createStore<PlayerTarget>()(playbackFeature);
+
+      store.attach({ media: video, container: null });
+
+      video.currentTime = 12;
+      video.dispatchEvent(new Event('timeupdate'));
+      expect(store.state.waiting).toBe(false);
+
+      video.dispatchEvent(new Event('waiting'));
+      expect(store.state.waiting).toBe(true);
+
+      video.currentTime = 12.25;
+      video.dispatchEvent(new Event('timeupdate'));
+      expect(store.state.waiting).toBe(false);
+    });
+
     it('detects started from currentTime', () => {
       const video = createMockVideo({
         paused: true,
@@ -159,6 +219,62 @@ describe('playbackFeature', () => {
       await store.play();
 
       expect(video.play).toHaveBeenCalled();
+    });
+
+    it('play() publishes the new state without waiting for the play event', async () => {
+      const video = createMockVideo({ paused: true });
+
+      // The mock changes `paused` like the media does and fires no events, so only the action can update the store.
+      video.play = vi.fn(() => {
+        Object.defineProperty(video, 'paused', { value: false, configurable: true });
+        return Promise.resolve();
+      });
+
+      const store = createStore<PlayerTarget>()(playbackFeature);
+
+      store.attach({ media: video, container: null });
+
+      const playing = store.play();
+
+      expect(store.state.paused).toBe(false);
+      expect(store.state.started).toBe(true);
+
+      await playing;
+    });
+
+    it('play() clears ended before the media does on replay', async () => {
+      const video = createMockVideo({ paused: true, ended: true });
+
+      // `ended` stays true until the replay's seek back to the start lands.
+      video.play = vi.fn(() => {
+        Object.defineProperty(video, 'paused', { value: false, configurable: true });
+        return Promise.resolve();
+      });
+
+      const store = createStore<PlayerTarget>()(playbackFeature);
+
+      store.attach({ media: video, container: null });
+
+      expect(store.state.ended).toBe(true);
+
+      await store.play();
+
+      expect(store.state.ended).toBe(false);
+    });
+
+    it('pause() publishes the new state without waiting for the pause event', () => {
+      const video = createMockVideo({ paused: false });
+
+      video.pause = vi.fn(() => {
+        Object.defineProperty(video, 'paused', { value: true, configurable: true });
+      });
+
+      const store = createStore<PlayerTarget>()(playbackFeature);
+
+      store.attach({ media: video, container: null });
+      store.pause();
+
+      expect(store.state.paused).toBe(true);
     });
 
     it('pause() calls pause on target', () => {

@@ -9,7 +9,7 @@ const UNMUTE_VOLUME = 0.25;
 
 export const volumeFeature = definePlayerFeature({
   name: 'volume',
-  state: ({ target }): MediaVolumeState => ({
+  state: ({ target, set }): MediaVolumeState => ({
     volume: 1,
     muted: false,
     volumeAvailability: 'unavailable',
@@ -26,29 +26,30 @@ export const volumeFeature = definePlayerFeature({
       }
 
       media.volume = clamped;
+
+      // `volumechange` can be asynchronous. Sync immediately so controlled sliders do not render a stale value
+      // between keyboard repeats.
+      set({ volume: media.volume, muted: media.muted });
+
       return media.volume;
     },
 
-    toggleMuted() {
+    setMuted(muted: boolean) {
       const { media } = target();
       if (!isMediaMutedCapable(media)) return false;
 
-      // A media that mutes but reports no level has nothing to restore, so the
-      // mute is simply flipped.
-      if (!isMediaVolumeCapable(media)) {
-        media.muted = !media.muted;
-        return media.muted;
+      media.muted = muted;
+
+      // Unmuting at zero would stay silent. A media that reports no level has
+      // nothing to restore.
+      const volumeCapable = isMediaVolumeCapable(media);
+
+      if (!muted && volumeCapable && media.volume === 0) {
+        media.volume = UNMUTE_VOLUME;
       }
 
-      const effectivelyMuted = media.muted || media.volume === 0;
-
-      if (effectivelyMuted) {
-        media.muted = false;
-
-        if (media.volume === 0) media.volume = UNMUTE_VOLUME;
-      } else {
-        media.muted = true;
-      }
+      // `volumechange` is queued, so sync now, or an immediate second toggle would read the old value.
+      set({ volume: volumeCapable ? media.volume : 1, muted: media.muted });
 
       return media.muted;
     },

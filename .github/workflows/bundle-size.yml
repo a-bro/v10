@@ -13,9 +13,11 @@ jobs:
     steps:
       - name: Checkout PR
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6.1.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -25,14 +27,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
-
-      - name: Restore Vite Task cache
-        uses: actions/cache/restore@v6
-        with:
-          path: node_modules/.vite/task-cache
-          key: vite-task-${{ runner.os }}-${{ runner.arch }}-restore-only-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
-          restore-keys: |
-            vite-task-${{ runner.os }}-${{ runner.arch }}-packages-
 
       - name: Build packages
         run: pnpm build:packages
@@ -53,10 +47,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout base
+      - name: Checkout comparison history
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+
+      - name: Checkout merge base
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          comparison_base=$(git merge-base "$HEAD_SHA" "$BASE_SHA")
+          echo "Checking out comparison base $comparison_base"
+          git checkout --detach "$comparison_base"
 
       - name: Checkout PR scripts
         uses: actions/checkout@v5
@@ -66,7 +69,7 @@ jobs:
           path: .bundle-size-pr
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6.1.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -80,18 +83,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Restore Vite Task cache
-        uses: actions/cache/restore@v6
-        with:
-          path: node_modules/.vite/task-cache
-          key: vite-task-${{ runner.os }}-${{ runner.arch }}-restore-only-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
-          restore-keys: |
-            vite-task-${{ runner.os }}-${{ runner.arch }}-packages-
-
       - name: Build and measure base
         run: |
           if [ -f .bundle-size-pr/.github/scripts/bundle-size.js ]; then
-            pnpm --dir .bundle-size-pr --fail-if-no-match install --frozen-lockfile --ignore-scripts --filter video.js
+            pnpm --dir .bundle-size-pr --fail-if-no-match install --frozen-lockfile --ignore-scripts --filter @videojs/monorepo
             pnpm build:packages
             node .bundle-size-pr/.github/scripts/bundle-size.js --root . --json base-size.json
           else
@@ -111,6 +106,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Download size data
         uses: actions/download-artifact@v4
@@ -124,7 +121,13 @@ jobs:
           --base artifacts/base-size/base-size.json
           > report.md
 
+      - name: Publish summary
+        run: cat report.md >> "$GITHUB_STEP_SUMMARY"
+
       - name: Post comment
+        # The default token is read-only on fork pull requests, so the comment
+        # can only be posted when the branch lives in this repository.
+        if: github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v7
         with:
           script: |

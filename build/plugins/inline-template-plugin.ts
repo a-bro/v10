@@ -1,5 +1,6 @@
 import { transform } from 'lightningcss';
 
+import { cssExclude, cssTargets } from '../css-targets.ts';
 import type { BuildMagicString, BuildPlugin } from './types.ts';
 
 const HTML_MARKER = '/*html*/';
@@ -231,6 +232,8 @@ function minifyCssQuasis(quasis: string[]): string[] {
 function minifyCss(css: string): string {
   const { code } = transform({
     filename: 'template.css',
+    targets: cssTargets,
+    exclude: cssExclude,
     code: Buffer.from(css),
     minify: true,
   });

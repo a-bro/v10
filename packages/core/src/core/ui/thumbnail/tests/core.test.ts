@@ -169,7 +169,7 @@ describe('ThumbnailCore', () => {
       expect(scale).toBe(2);
     });
 
-    it('does not scale when tile already fits within constraints', () => {
+    it('scales up to fill the max box', () => {
       const core = new ThumbnailCore();
 
       const scale = core.calculateScale(256, 160, {
@@ -179,7 +179,21 @@ describe('ThumbnailCore', () => {
         maxHeight: 320,
       });
 
-      expect(scale).toBe(1);
+      expect(scale).toBe(2);
+    });
+
+    it('lets min constraints win over max', () => {
+      const core = new ThumbnailCore();
+
+      const scale = core.calculateScale(100, 50, {
+        minWidth: 400,
+        maxWidth: 200,
+        minHeight: 0,
+        maxHeight: Infinity,
+      });
+
+      // Filling max-width alone gives 200/100 = 2; min-width raises it to 400/100 = 4.
+      expect(scale).toBe(4);
     });
   });
 
@@ -385,6 +399,40 @@ describe('ThumbnailCore', () => {
       expect(
         core.resize(thumbnail, 0, 0, { minWidth: 0, maxWidth: Infinity, minHeight: 0, maxHeight: Infinity })
       ).toBeUndefined();
+    });
+  });
+
+  describe('resolveCrossOrigin', () => {
+    it('inherits when unset', () => {
+      const core = new ThumbnailCore();
+
+      expect(core.resolveCrossOrigin(undefined, 'anonymous')).toBe('anonymous');
+      expect(core.resolveCrossOrigin(undefined, 'use-credentials')).toBe('use-credentials');
+    });
+
+    it('returns nothing when there is nothing to inherit', () => {
+      const core = new ThumbnailCore();
+
+      expect(core.resolveCrossOrigin(undefined, undefined)).toBeUndefined();
+      expect(core.resolveCrossOrigin(undefined, null)).toBeUndefined();
+    });
+
+    it('prefers an explicit value over the inherited one', () => {
+      const core = new ThumbnailCore();
+
+      expect(core.resolveCrossOrigin('anonymous', 'use-credentials')).toBe('anonymous');
+    });
+
+    it('opts out of inheritance for an explicit null', () => {
+      const core = new ThumbnailCore();
+
+      expect(core.resolveCrossOrigin(null, 'anonymous')).toBeUndefined();
+    });
+
+    it('passes an empty value through rather than opting out', () => {
+      const core = new ThumbnailCore();
+
+      expect(core.resolveCrossOrigin('', 'use-credentials')).toBe('');
     });
   });
 

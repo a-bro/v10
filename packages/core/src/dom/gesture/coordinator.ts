@@ -1,5 +1,7 @@
 import { isInteractiveTarget, listen } from '@videojs/utils/dom';
 
+import { isInteractionLocked } from '../ui/interaction-lock';
+import { getGestureActionValue } from './action-value';
 import type {
   GestureActivateEvent,
   GestureBinding,
@@ -39,6 +41,8 @@ export class GestureCoordinator {
    * action, it doesn't hand the tap back to a fallback handler.
    */
   claimsTap(event: PointerEvent, action: string): boolean {
+    if (isInteractionLocked(this.#target)) return true;
+
     if (isInteractiveTarget(event)) return false;
 
     return this.#bindings.some(
@@ -47,15 +51,17 @@ export class GestureCoordinator {
   }
 
   add(binding: GestureBinding): () => void {
+    const value = getGestureActionValue(binding.action ?? '', binding.region, binding.value);
     const wrapped: GestureBinding = {
       ...binding,
+      value,
       onActivate: (event) => {
         if (this.#subscribers.size > 0) {
           const activateEvent: GestureActivateEvent = {
             type: binding.type,
             source: 'gesture',
             action: binding.action,
-            value: binding.value,
+            value,
             region: binding.region,
             pointer: binding.pointer,
             event,
@@ -107,6 +113,11 @@ export class GestureCoordinator {
       this.#target,
       'pointerdown',
       (event) => {
+        if (isInteractionLocked(this.#target)) {
+          pointerDownTime = 0;
+          return;
+        }
+
         if (event.button !== 0) return;
 
         pointerDownTime = Date.now();
@@ -118,6 +129,11 @@ export class GestureCoordinator {
       this.#target,
       'pointerup',
       (event) => {
+        if (isInteractionLocked(this.#target)) {
+          pointerDownTime = 0;
+          return;
+        }
+
         if (event.button !== 0) return;
 
         if (Date.now() - pointerDownTime > TAP_THRESHOLD) return;

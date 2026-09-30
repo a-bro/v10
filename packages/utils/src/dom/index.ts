@@ -10,8 +10,10 @@ export {
 export {
   type ElementPredicate,
   type ElementTypePredicate,
+  findComposedElement,
   findElementChild,
   followElementPath,
+  getComposedChildren,
   getElementChildren,
 } from './children';
 export { getDevicePixelRatio, watchDevicePixelRatio } from './device-pixel-ratio';
@@ -37,6 +39,7 @@ export {
   getElementPadding,
   getElementSize,
   getInlineExtent,
+  isPointInElement,
   type LogicalBoxEdges,
   type MeasureElementChildrenOptions,
   type MeasureElementOptions,
@@ -67,7 +70,14 @@ export {
   tryHidePopover,
   tryShowPopover,
 } from './popover';
-export { isDocument, isHTMLAudioElement, isHTMLMediaElement, isHTMLVideoElement, isShadowRoot } from './predicates';
+export {
+  isDocument,
+  isHTMLAudioElement,
+  isHTMLImageElement,
+  isHTMLMediaElement,
+  isHTMLVideoElement,
+  isShadowRoot,
+} from './predicates';
 export { type RafThrottled, rafThrottle } from './raf-throttle';
 export { loadScript } from './script';
 export { applyShadowStyles, createShadowStyle, ensureGlobalStyle, type ShadowStyle } from './shadow-styles';
@@ -85,9 +95,21 @@ export {
   snapshotInlineStyles,
   withInlineStyles,
 } from './style';
-export { supportsAnchorPositioning, supportsAnimationFrame, supportsIdleCallback } from './supports';
+export {
+  supportsAnchorPositioning,
+  supportsAnimationFrame,
+  supportsConstructableStyleSheets,
+  supportsIdleCallback,
+  supportsPopoverAPI,
+} from './supports';
 export { cloneTemplateRoot, createTemplate, getTemplateElement, getTemplateRoot, renderTemplate } from './template';
-export { type CaptionOrSubtitleKind, findTrackElement, getTextTrackList, isCaptionOrSubtitleTrack } from './text-track';
+export {
+  type CaptionOrSubtitleKind,
+  findTrackElement,
+  getCaptionOrSubtitleTracks,
+  getTextTrackList,
+  isCaptionOrSubtitleTrack,
+} from './text-track';
 export { serializeTimeRanges } from './time-ranges';
 export { containsComposed } from './tree';
 export type { CustomElement, CustomElementCallbacks, EventListenerFor, EventType, QueriedElement } from './types';

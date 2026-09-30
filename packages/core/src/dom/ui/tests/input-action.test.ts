@@ -6,7 +6,7 @@ import {
   type MediaSnapshotStore,
   toInputActionEvent,
 } from '../input-action';
-import { isSliderFocused } from '../slider-focus';
+import { isSliderFocused } from '../slider/focus';
 
 function mockStore(state: Record<string, unknown>): MediaSnapshotStore {
   return { state };
@@ -19,13 +19,14 @@ describe('input-action', () => {
         source: 'hotkey',
         action: 'togglePaused',
         value: 1,
-        event: new KeyboardEvent('keydown', { key: 'k' }),
+        event: new KeyboardEvent('keydown', { key: 'k', repeat: true }),
       })
     ).toEqual({
       source: 'hotkey',
       action: 'togglePaused',
       value: 1,
       key: 'k',
+      repeat: true,
     });
   });
 
@@ -39,10 +40,10 @@ describe('input-action', () => {
           muted: false,
           playbackRates: [1, 1.5],
           playbackRate: 1.5,
-          fullscreen: true,
+          isFullscreen: true,
           subtitlesShowing: true,
-          textTrackList: [{ kind: 'captions', label: 'English', language: 'en', mode: 'showing' }],
-          pip: false,
+          textTrackList: [{ id: 'captions-en', kind: 'captions', label: 'English', language: 'en', mode: 'showing' }],
+          isPictureInPicture: false,
           currentTime: 30,
           duration: 120,
           seeking: true,
@@ -53,10 +54,10 @@ describe('input-action', () => {
       volume: 0.5,
       muted: false,
       playbackRate: 1.5,
-      fullscreen: true,
+      isFullscreen: true,
       subtitlesShowing: true,
       subtitlesAvailable: true,
-      pip: false,
+      isPictureInPicture: false,
       currentTime: 30,
       duration: 120,
       seeking: true,

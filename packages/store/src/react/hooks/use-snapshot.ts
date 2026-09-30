@@ -1,3 +1,5 @@
+'use client';
+
 import { identity } from '@videojs/utils/function';
 
 import type { State } from '../../core/state';
@@ -23,6 +25,9 @@ export function useSnapshot<T extends object>(state: State<T>): T;
 export function useSnapshot<T extends object, R>(state: State<T>, selector: Selector<T, R>, isEqual?: Comparator<R>): R;
 
 export function useSnapshot(state: State<object>, selector?: Selector<any, any>, isEqual?: Comparator<any>) {
+  // React Compiler cannot track external mutable state reads across subscriptions.
+  'use no memo';
+
   return useSelector(
     (cb) => state.subscribe(cb),
     () => state.current,

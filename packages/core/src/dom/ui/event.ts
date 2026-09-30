@@ -1,11 +1,13 @@
 export interface UIEvent {
   readonly defaultPrevented?: boolean;
+  readonly detail?: number;
   preventDefault(): void;
   stopPropagation(): void;
 }
 
 export interface UIKeyboardEvent extends UIEvent {
   key: string;
+  repeat?: boolean;
   shiftKey: boolean;
   ctrlKey: boolean;
   altKey: boolean;

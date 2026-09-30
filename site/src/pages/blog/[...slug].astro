@@ -5,8 +5,9 @@ import { getCollection, getEntries, render } from 'astro:content';
 import FormattedDate from '@/components/FormattedDate.astro';
 import JsonLd from '@/components/JsonLd.astro';
 import defaultMarkdownComponents from '@/components/typography/defaultMarkdownComponents';
-import { PRODUCTION_URL } from '@/consts';
+import { FIRST_V10_BLOG_MONTH, PRODUCTION_URL } from '@/consts';
 import Blog from '@/layouts/Blog.astro';
+import MarkdownAlternate from '@/components/MarkdownAlternate.astro';
 import { createBlogPostingSchema } from '@/utils/jsonLd/schemas';
 
 export async function getStaticPaths() {
@@ -24,6 +25,9 @@ type Props = CollectionEntry<'blog'>;
 const post = Astro.props;
 const { Content, remarkPluginFrontmatter } = await render(post);
 const authors = await getEntries(post.data.authors);
+const publishedDate = post.data.pubDate.toISOString().slice(0, 10);
+// Posts are read one at a time by agents, so a pre-v10 post says so itself rather than relying on the blog index.
+const isLegacyPost = publishedDate < FIRST_V10_BLOG_MONTH;
 
 // Resolve OG image URL for JSON-LD
 const ogImageUrl = post.data.ogImage
@@ -54,6 +58,7 @@ const jsonLdSchema = createBlogPostingSchema({
   image={post.data.ogImage}
   twitterImage={post.data.twitterImage}
 >
+  <MarkdownAlternate slot="head" />
   <JsonLd slot="head" schema={jsonLdSchema} />
   <article
     class="@container text-p2 sm:text-p15"
@@ -67,7 +72,8 @@ const jsonLdSchema = createBlogPostingSchema({
       class="relative mx-auto mb-10 max-w-3xl border-y border-faded-black py-10 dark:border-manila-light"
     >
       <div
-        class="mb-3 flex flex-col gap-2 font-display text-h4 font-bold text-orange uppercase sm:flex-row sm:gap-4"
+        class="mb-4 flex flex-col gap-2 font-display text-h3 font-bold text-accent uppercase sm:flex-row sm:gap-4"
+        data-llms-ignore
       >
         <FormattedDate date={post.data.pubDate} />
         <span class="hidden sm:inline">&bull;</span>
@@ -75,9 +81,17 @@ const jsonLdSchema = createBlogPostingSchema({
           >{remarkPluginFrontmatter.minutesRead}</span
         >
       </div>
-      <h1 class="mb-2 font-display text-h2 leading-tight uppercase sm:text-h15">
+      <h1
+        class="mb-3 font-display text-h2 leading-tight uppercase text-balance sm:text-h15"
+      >
         {post.data.title}
       </h1>
+      <div hidden data-llms-only>
+        <p>
+          Published {publishedDate}.{isLegacyPost &&
+            " This post describes an earlier Video.js version (1 through 8); its APIs do not apply to Video.js 10."}
+        </p>
+      </div>
       <div class="">
         By {
           new Intl.ListFormat("en", { style: "long", type: "conjunction" })

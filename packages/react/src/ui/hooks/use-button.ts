@@ -1,4 +1,6 @@
-import { createButton, type UIEvent } from '@videojs/core/dom';
+'use client';
+
+import { type ButtonActivationSource, createButton, type UIEvent } from '@videojs/core/dom';
 import type { ComponentPropsWithRef, Ref } from 'react';
 import { useCallback } from 'react';
 
@@ -6,7 +8,7 @@ import { mergeProps } from '../../utils/merge-props';
 
 export interface UseButtonParameters {
   displayName: string;
-  onActivate: (event: UIEvent) => void;
+  onActivate: (event: UIEvent, source: ButtonActivationSource) => void;
   isDisabled: () => boolean;
 }
 

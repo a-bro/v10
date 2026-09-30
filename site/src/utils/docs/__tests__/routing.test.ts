@@ -1,7 +1,17 @@
 import { describe, expect, it, vi } from 'vite-plus/test';
 
 import type { Guide, Sidebar } from '../../../types/docs';
-import { resolveDocsLinkUrl, resolveFrameworkChange, resolveIndexRedirect } from '../routing';
+import {
+  buildAgnosticDocsUrl,
+  buildDocsUrl,
+  getFrameworkFromDocsPath,
+  getFrameworkFromDocsUrl,
+  isDocsGuideActive,
+  resolveDocsHref,
+  resolveDocsLinkUrl,
+  resolveFrameworkChange,
+  resolveIndexRedirect,
+} from '../routing';
 
 // Mock the validation functions from @/types/docs to use mock framework/style configuration
 // Note: This mock is hoisted, so we define MOCK_FRAMEWORK_STYLES inside the factory
@@ -56,18 +66,18 @@ describe('routing utilities', () => {
   };
 
   const guideHtmlOnly: Guide = {
-    slug: 'how-to/html-only',
+    slug: 'guides/html-only',
     frameworks: ['html'] satisfies MockFramework[],
   };
 
   // Guide with no own restrictions, but lives inside a react-only section
   const guideInReactSection: Guide = {
-    slug: 'reference/react-hook',
+    slug: 'components/react-hook',
   };
 
   // Guide with no own restrictions, but lives inside an html-only section
   const guideInHtmlSection: Guide = {
-    slug: 'reference/html-controller',
+    slug: 'components/html-controller',
   };
 
   const mockSidebar: Sidebar = [
@@ -91,6 +101,46 @@ describe('routing utilities', () => {
     },
     guideHtmlOnly,
   ];
+
+  describe('getFrameworkFromDocsPath', () => {
+    it('returns the framework from an explicit docs route', () => {
+      expect(getFrameworkFromDocsPath('/docs/framework/react/guides/installation')).toBe('react');
+      expect(getFrameworkFromDocsPath('/docs/framework/html')).toBe('html');
+    });
+
+    it('returns the framework from canonical installation routes', () => {
+      expect(getFrameworkFromDocsPath('/docs/guides/installation/react')).toBe('react');
+      expect(getFrameworkFromDocsPath('/docs/guides/installation/html')).toBe('html');
+      expect(getFrameworkFromDocsPath('/docs/guides/installation/vue')).toBe('html');
+      expect(getFrameworkFromDocsPath('/docs/guides/installation/svelte')).toBe('html');
+      expect(getFrameworkFromDocsPath('/docs/guides/installation/cdn')).toBe('html');
+      expect(getFrameworkFromDocsPath('/docs/guides/installation/shadcn')).toBeNull();
+    });
+
+    it('ignores framework-agnostic and invalid routes', () => {
+      expect(getFrameworkFromDocsPath('/docs/guides/installation')).toBeNull();
+      expect(getFrameworkFromDocsPath('/docs/framework/vue/guides/installation')).toBeNull();
+      expect(getFrameworkFromDocsPath('/blog/framework/react')).toBeNull();
+    });
+  });
+
+  describe('getFrameworkFromDocsUrl', () => {
+    it('returns the framework selected on the Shadcn route', () => {
+      expect(
+        getFrameworkFromDocsUrl(new URL('https://videojs.org/docs/guides/installation/shadcn?framework=html'))
+      ).toBe('html');
+      expect(
+        getFrameworkFromDocsUrl(new URL('https://videojs.org/docs/guides/installation/shadcn?framework=react'))
+      ).toBe('react');
+    });
+
+    it('does not invent a Shadcn framework when the query is missing or invalid', () => {
+      expect(getFrameworkFromDocsUrl(new URL('https://videojs.org/docs/guides/installation/shadcn'))).toBeNull();
+      expect(
+        getFrameworkFromDocsUrl(new URL('https://videojs.org/docs/guides/installation/shadcn?framework=vue'))
+      ).toBeNull();
+    });
+  });
 
   describe('resolveIndexRedirect', () => {
     describe('with framework param', () => {
@@ -171,7 +221,7 @@ describe('routing utilities', () => {
           params: {},
         });
 
-        expect(result.url).toBe(`/docs/framework/react/${result.selectedSlug}`);
+        expect(result.url).toBe(buildDocsUrl('react', result.selectedSlug));
       });
     });
   });
@@ -198,13 +248,13 @@ describe('routing utilities', () => {
         const result = resolveFrameworkChange(
           {
             currentFramework: 'html',
-            currentSlug: 'how-to/html-only',
+            currentSlug: 'guides/html-only',
             newFramework: 'react',
           },
           mockSidebar
         );
 
-        expect(result.selectedSlug).not.toBe('how-to/html-only');
+        expect(result.selectedSlug).not.toBe('guides/html-only');
         expect(result.slugChanged).toBe(true);
         expect(result.shouldReplace).toBe(false);
         expect(result.reason).toContain('changed slug');
@@ -214,13 +264,13 @@ describe('routing utilities', () => {
         const result = resolveFrameworkChange(
           {
             currentFramework: 'html',
-            currentSlug: 'reference/html-controller', // in html-only section
+            currentSlug: 'components/html-controller', // in html-only section
             newFramework: 'react',
           },
           mockSidebar
         );
 
-        expect(result.selectedSlug).not.toBe('reference/html-controller');
+        expect(result.selectedSlug).not.toBe('components/html-controller');
         expect(result.slugChanged).toBe(true);
         expect(result.shouldReplace).toBe(false);
       });
@@ -305,7 +355,7 @@ describe('routing utilities', () => {
       it('should fall back when guide inherits framework restriction from section', () => {
         const result = resolveDocsLinkUrl(
           {
-            targetSlug: 'reference/react-hook', // in react-only section, no own restriction
+            targetSlug: 'components/react-hook', // in react-only section, no own restriction
             contextFramework: 'html',
           },
           mockSidebar
@@ -369,6 +419,49 @@ describe('routing utilities', () => {
 
         expect(result.url).toBe('/docs/framework/react/concepts/everyone');
       });
+    });
+  });
+
+  describe('canonical installation routes', () => {
+    it('builds the preference-aware installation landing page', () => {
+      expect(buildAgnosticDocsUrl()).toBe('/docs');
+      expect(buildAgnosticDocsUrl(null)).toBe('/docs');
+      expect(buildAgnosticDocsUrl('guides/installation')).toBe('/docs/guides/installation');
+    });
+
+    it('keeps installation active across every installation route', () => {
+      expect(isDocsGuideActive('react', 'guides/installation', '/docs/guides/installation/react')).toBe(true);
+      expect(isDocsGuideActive('react', 'guides/installation', '/docs/guides/installation/shadcn')).toBe(true);
+      expect(isDocsGuideActive('html', 'guides/installation', '/docs/guides/installation/cdn')).toBe(true);
+      expect(isDocsGuideActive('html', 'guides/installation', '/docs/guides/installation/vue')).toBe(true);
+    });
+
+    it('still requires an exact URL for other guides', () => {
+      expect(isDocsGuideActive('html', 'guides/architecture', '/docs/framework/html/guides/architecture')).toBe(true);
+      expect(isDocsGuideActive('html', 'guides/architecture', '/docs/guides/installation/html')).toBe(false);
+    });
+
+    it('resolves the canonical framework and method URLs', () => {
+      expect(resolveDocsHref({ slug: null, framework: null })).toBe('/docs');
+      expect(resolveDocsHref({ slug: 'guides/installation', framework: null })).toBe('/docs/guides/installation');
+      expect(resolveDocsHref({ slug: null, framework: 'html' })).toBe('/docs/guides/installation/html');
+      expect(resolveDocsHref({ slug: 'guides/installation', framework: 'react' })).toBe(
+        '/docs/guides/installation/react'
+      );
+      expect(resolveDocsHref({ slug: 'guides/installation-shadcn', framework: 'react' })).toBe(
+        '/docs/guides/installation/shadcn?framework=react'
+      );
+      expect(resolveDocsHref({ slug: 'guides/installation-shadcn', framework: 'html' })).toBe(
+        '/docs/guides/installation/shadcn?framework=html'
+      );
+      expect(resolveDocsHref({ slug: 'guides/installation-cdn', framework: 'html' })).toBe(
+        '/docs/guides/installation/cdn'
+      );
+      expect(resolveDocsHref({ slug: 'guides/cdn', framework: 'html' })).toBe('/docs/framework/html/guides/cdn');
+    });
+
+    it('rejects unknown guide slugs', () => {
+      expect(() => resolveDocsHref({ slug: 'guides/does-not-exist', framework: 'html' })).toThrow(/No guide found/);
     });
   });
 });

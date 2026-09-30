@@ -1,4 +1,4 @@
-import { HTMLVideoElementHost } from '@videojs/media/dom/video-host';
+import { HTMLVideoAdapter } from '@videojs/media/dom';
 import { createStore } from '@videojs/store';
 import type { WebKitVideoElement } from '@videojs/utils/dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
@@ -43,7 +43,7 @@ describe('fullscreenFeature', () => {
 
       store.attach({ media: video, container });
 
-      expect(selectFullscreen(store.state)?.fullscreen).toBe(false);
+      expect(selectFullscreen(store.state)?.isFullscreen).toBe(false);
     });
 
     it('syncs initial state on attach', () => {
@@ -54,7 +54,7 @@ describe('fullscreenFeature', () => {
 
       store.attach({ media: video, container });
 
-      expect(store.state.fullscreen).toBe(false);
+      expect(store.state.isFullscreen).toBe(false);
     });
 
     it('detects fullscreen availability when supported', () => {
@@ -130,19 +130,19 @@ describe('fullscreenFeature', () => {
 
       store.attach({ media: video, container });
 
-      expect(store.state.fullscreen).toBe(false);
+      expect(store.state.isFullscreen).toBe(false);
 
       // Simulate entering fullscreen via WebKit presentation mode
       video.webkitPresentationMode = 'fullscreen';
       video.dispatchEvent(new Event('webkitpresentationmodechanged'));
 
-      expect(store.state.fullscreen).toBe(true);
+      expect(store.state.isFullscreen).toBe(true);
 
       // Simulate exiting
       video.webkitPresentationMode = 'inline';
       video.dispatchEvent(new Event('webkitpresentationmodechanged'));
 
-      expect(store.state.fullscreen).toBe(false);
+      expect(store.state.isFullscreen).toBe(false);
     });
 
     it('updates fullscreen on fullscreenchange event', () => {
@@ -159,7 +159,7 @@ describe('fullscreenFeature', () => {
 
       store.attach({ media: video, container });
 
-      expect(store.state.fullscreen).toBe(false);
+      expect(store.state.isFullscreen).toBe(false);
 
       // Simulate entering fullscreen
       Object.defineProperty(document, 'fullscreenElement', {
@@ -169,7 +169,7 @@ describe('fullscreenFeature', () => {
       });
       document.dispatchEvent(new Event('fullscreenchange'));
 
-      expect(store.state.fullscreen).toBe(true);
+      expect(store.state.isFullscreen).toBe(true);
 
       // Simulate exiting fullscreen
       Object.defineProperty(document, 'fullscreenElement', {
@@ -179,7 +179,7 @@ describe('fullscreenFeature', () => {
       });
       document.dispatchEvent(new Event('fullscreenchange'));
 
-      expect(store.state.fullscreen).toBe(false);
+      expect(store.state.isFullscreen).toBe(false);
     });
 
     it('detects fullscreen via :fullscreen pseudo-class when container is in a shadow tree', () => {
@@ -209,7 +209,7 @@ describe('fullscreenFeature', () => {
       });
       document.dispatchEvent(new Event('fullscreenchange'));
 
-      expect(store.state.fullscreen).toBe(true);
+      expect(store.state.isFullscreen).toBe(true);
 
       matchesSpy.mockReturnValue(false);
       Object.defineProperty(document, 'fullscreenElement', {
@@ -219,7 +219,7 @@ describe('fullscreenFeature', () => {
       });
       document.dispatchEvent(new Event('fullscreenchange'));
 
-      expect(store.state.fullscreen).toBe(false);
+      expect(store.state.isFullscreen).toBe(false);
       matchesSpy.mockRestore();
     });
 
@@ -251,7 +251,7 @@ describe('fullscreenFeature', () => {
       });
       document.dispatchEvent(new Event('fullscreenchange'));
 
-      expect(store.state.fullscreen).toBe(true);
+      expect(store.state.isFullscreen).toBe(true);
       matchesSpy.mockRestore();
     });
 
@@ -280,7 +280,7 @@ describe('fullscreenFeature', () => {
       document.dispatchEvent(new Event('fullscreenchange'));
 
       // State should not update after destroy
-      expect(store.state.fullscreen).toBe(false);
+      expect(store.state.isFullscreen).toBe(false);
     });
   });
 
@@ -383,7 +383,7 @@ describe('fullscreenFeature', () => {
   });
 
   describe('transitions', () => {
-    it('toggleFullscreen() exits PiP first when entering fullscreen', async () => {
+    it('requestFullscreen() exits PiP first when entering fullscreen', async () => {
       Object.defineProperty(document, 'fullscreenEnabled', {
         value: true,
         writable: true,
@@ -409,7 +409,7 @@ describe('fullscreenFeature', () => {
 
       store.attach({ media: video, container });
 
-      await store.toggleFullscreen();
+      await store.requestFullscreen();
 
       expect(document.exitPictureInPicture).toHaveBeenCalled();
       expect(container.requestFullscreen).toHaveBeenCalled();
@@ -487,7 +487,7 @@ describe('fullscreenFeature', () => {
   });
 });
 
-describe('fullscreenFeature with HTMLVideoElementHost', () => {
+describe('fullscreenFeature with HTMLVideoAdapter', () => {
   let originalFullscreenEnabled: boolean | undefined;
 
   beforeEach(() => {
@@ -512,7 +512,7 @@ describe('fullscreenFeature with HTMLVideoElementHost', () => {
     it('syncs initial state on attach', () => {
       const video = createMockVideo();
       const container = document.createElement('div');
-      const host = new HTMLVideoElementHost();
+      const host = new HTMLVideoAdapter();
 
       host.attach(video);
 
@@ -520,12 +520,12 @@ describe('fullscreenFeature with HTMLVideoElementHost', () => {
 
       store.attach({ media: host, container });
 
-      expect(store.state.fullscreen).toBe(false);
+      expect(store.state.isFullscreen).toBe(false);
     });
 
     it('reflects host.isFullscreen when document.fullscreenElement is the underlying video', () => {
       const video = createMockVideo();
-      const host = new HTMLVideoElementHost();
+      const host = new HTMLVideoAdapter();
 
       host.attach(video);
 
@@ -539,7 +539,7 @@ describe('fullscreenFeature with HTMLVideoElementHost', () => {
 
       store.attach({ media: host, container: null });
 
-      expect(store.state.fullscreen).toBe(true);
+      expect(store.state.isFullscreen).toBe(true);
     });
 
     it('updates fullscreen on fullscreenchange when container matches', () => {
@@ -551,7 +551,7 @@ describe('fullscreenFeature with HTMLVideoElementHost', () => {
 
       const video = createMockVideo();
       const container = document.createElement('div');
-      const host = new HTMLVideoElementHost();
+      const host = new HTMLVideoAdapter();
 
       host.attach(video);
 
@@ -559,7 +559,7 @@ describe('fullscreenFeature with HTMLVideoElementHost', () => {
 
       store.attach({ media: host, container });
 
-      expect(store.state.fullscreen).toBe(false);
+      expect(store.state.isFullscreen).toBe(false);
 
       Object.defineProperty(document, 'fullscreenElement', {
         value: container,
@@ -568,7 +568,7 @@ describe('fullscreenFeature with HTMLVideoElementHost', () => {
       });
       document.dispatchEvent(new Event('fullscreenchange'));
 
-      expect(store.state.fullscreen).toBe(true);
+      expect(store.state.isFullscreen).toBe(true);
 
       Object.defineProperty(document, 'fullscreenElement', {
         value: null,
@@ -577,7 +577,7 @@ describe('fullscreenFeature with HTMLVideoElementHost', () => {
       });
       document.dispatchEvent(new Event('fullscreenchange'));
 
-      expect(store.state.fullscreen).toBe(false);
+      expect(store.state.isFullscreen).toBe(false);
     });
 
     it('syncs fullscreen on webkitpresentationmodechanged forwarded from target (iOS Safari)', () => {
@@ -585,7 +585,7 @@ describe('fullscreenFeature with HTMLVideoElementHost', () => {
 
       video.webkitPresentationMode = 'inline';
       const container = document.createElement('div');
-      const host = new HTMLVideoElementHost();
+      const host = new HTMLVideoAdapter();
 
       host.attach(video);
 
@@ -593,17 +593,17 @@ describe('fullscreenFeature with HTMLVideoElementHost', () => {
 
       store.attach({ media: host, container });
 
-      expect(store.state.fullscreen).toBe(false);
+      expect(store.state.isFullscreen).toBe(false);
 
       video.webkitPresentationMode = 'fullscreen';
       video.dispatchEvent(new Event('webkitpresentationmodechanged'));
 
-      expect(store.state.fullscreen).toBe(true);
+      expect(store.state.isFullscreen).toBe(true);
 
       video.webkitPresentationMode = 'inline';
       video.dispatchEvent(new Event('webkitpresentationmodechanged'));
 
-      expect(store.state.fullscreen).toBe(false);
+      expect(store.state.isFullscreen).toBe(false);
     });
   });
 
@@ -619,7 +619,7 @@ describe('fullscreenFeature with HTMLVideoElementHost', () => {
       const container = document.createElement('div');
 
       container.requestFullscreen = vi.fn().mockResolvedValue(undefined);
-      const host = new HTMLVideoElementHost();
+      const host = new HTMLVideoAdapter();
 
       host.attach(video);
 
@@ -636,7 +636,7 @@ describe('fullscreenFeature with HTMLVideoElementHost', () => {
       const video = createMockVideo();
 
       video.requestFullscreen = vi.fn().mockResolvedValue(undefined);
-      const host = new HTMLVideoElementHost();
+      const host = new HTMLVideoAdapter();
 
       host.attach(video);
 
@@ -660,7 +660,7 @@ describe('fullscreenFeature with HTMLVideoElementHost', () => {
 
       video.webkitSetPresentationMode = vi.fn();
       const container = document.createElement('div');
-      const host = new HTMLVideoElementHost();
+      const host = new HTMLVideoAdapter();
 
       host.attach(video);
 
@@ -679,7 +679,7 @@ describe('fullscreenFeature with HTMLVideoElementHost', () => {
       document.exitFullscreen = vi.fn().mockResolvedValue(undefined);
 
       const video = createMockVideo();
-      const host = new HTMLVideoElementHost();
+      const host = new HTMLVideoAdapter();
 
       host.attach(video);
 
@@ -711,7 +711,7 @@ describe('fullscreenFeature with HTMLVideoElementHost', () => {
       const container = document.createElement('div');
 
       container.requestFullscreen = vi.fn().mockResolvedValue(undefined);
-      const host = new HTMLVideoElementHost();
+      const host = new HTMLVideoAdapter();
 
       host.attach(video);
 

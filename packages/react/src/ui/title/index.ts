@@ -1,1 +1,1 @@
-export { Title, type TitleProps } from './title';
+export * from './component';
