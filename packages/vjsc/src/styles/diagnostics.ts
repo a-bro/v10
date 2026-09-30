@@ -1,13 +1,19 @@
 import { type Selector, type SelectorComponent, transform } from 'lightningcss';
 
 import type { DesignSystem } from './design-system';
-import { isGroupMarker, type StyleManifest, type StyleManifestRule, utilitiesForRule } from './manifest';
+import {
+  collectGroupOwners,
+  isGroupMarker,
+  type ResolvedStyles,
+  type ResolvedStyleRule,
+  utilitiesForRule,
+} from './resolved';
 
 const encoder = new TextEncoder();
 
 export type ComplexSelectorDiagnosticLevel = 'warn' | 'error' | 'off';
 
-export interface VjscDiagnosticsOptions {
+export interface StyleDiagnosticsOptions {
   /** How suspicious structural selectors are reported. Hard isolation errors always throw. @default 'warn' */
   readonly complexSelectors?: ComplexSelectorDiagnosticLevel | undefined;
 }
@@ -22,20 +28,21 @@ export type StyleDiagnosticCode =
 export interface StyleDiagnostic {
   readonly code: StyleDiagnosticCode;
   readonly kind: 'error' | 'complex-selector';
-  readonly rule: StyleManifestRule;
+  readonly rule: ResolvedStyleRule;
   readonly utilities: readonly string[];
 }
 
-/** Diagnose relationships and structural selectors using only the imported local manifest. */
-export function diagnoseStyleManifest(
-  manifest: StyleManifest,
-  variants: readonly string[] = []
+/** Diagnose relationships and structural selectors using only the resolved local styles. */
+export function diagnoseStyles(
+  styles: ResolvedStyles,
+  variants: readonly string[] = [],
+  merge?: DesignSystem['merge']
 ): readonly StyleDiagnostic[] {
-  const owners = collectGroupOwners(manifest.rules, variants);
+  const owners = new Set(collectGroupOwners(styles.rules, variants, merge).keys());
   const diagnostics: StyleDiagnostic[] = [];
 
-  for (const rule of manifest.rules) {
-    const utilities = utilitiesForRule(rule, variants);
+  for (const rule of styles.rules) {
+    const utilities = utilitiesForRule(rule, variants, merge);
     const peers = utilities.filter(usesPeerRelationship);
     const implicitAncestors = utilities.filter(usesImplicitAncestor);
     const unownedGroups = utilities.filter((utility) =>
@@ -65,15 +72,16 @@ export function diagnoseStyleManifest(
 
 /** Inspect Tailwind-expanded CSS so custom utilities cannot conceal structural selectors. */
 export function diagnoseCompiledCandidate(
-  rule: StyleManifestRule,
+  rule: ResolvedStyleRule,
   candidate: string,
   css: string,
   groupOwners: ReadonlySet<string>
 ): readonly StyleDiagnostic[] {
-  let hasRoot = false;
   let scopeEscape = false;
   let complex = false;
 
+  // Tailwind nests variants under the candidate class (`&[data-open]`) or flattens them onto it
+  // (`.candidate[data-open]`), depending on whether the candidate also sets declarations of its own.
   transform({
     filename: 'candidate.css',
     code: encoder.encode(css),
@@ -81,12 +89,9 @@ export function diagnoseCompiledCandidate(
       Rule: {
         style(styleRule) {
           for (const selector of styleRule.value.selectors) {
-            if (isCandidateRoot(selector, candidate)) {
-              hasRoot = true;
-              continue;
-            }
+            if (isCandidateRoot(selector, candidate)) continue;
 
-            if (!selector.some((component) => component.type === 'nesting')) scopeEscape = true;
+            if (!isAnchoredToCandidate(selector, candidate)) scopeEscape = true;
 
             if (selectorIsComplex(selector, groupOwners)) complex = true;
           }
@@ -97,7 +102,7 @@ export function diagnoseCompiledCandidate(
 
   const diagnostics: StyleDiagnostic[] = [];
 
-  if (!hasRoot || scopeEscape) diagnostics.push(createDiagnostic('VJSC_STYLE_SCOPE_ESCAPE', rule, [candidate]));
+  if (scopeEscape) diagnostics.push(createDiagnostic('VJSC_STYLE_SCOPE_ESCAPE', rule, [candidate]));
 
   if (complex) diagnostics.push(createDiagnostic('VJSC_STYLE_COMPLEX_SELECTOR', rule, [candidate]));
 
@@ -106,18 +111,18 @@ export function diagnoseCompiledCandidate(
 
 /** Diagnose Tailwind-expanded candidates for the semantic rules referenced by one source module. */
 export function diagnoseCompiledStyles(
-  manifest: StyleManifest,
+  styles: ResolvedStyles,
   design: DesignSystem,
   ruleClassNames: ReadonlySet<string>,
   variants: readonly string[] = []
 ): readonly StyleDiagnostic[] {
-  const groupOwners = collectGroupOwners(manifest.rules, variants);
+  const groupOwners = new Set(collectGroupOwners(styles.rules, variants, design.merge).keys());
   const diagnostics: StyleDiagnostic[] = [];
 
-  for (const rule of manifest.rules) {
+  for (const rule of styles.rules) {
     if (!ruleClassNames.has(rule.className)) continue;
 
-    for (const candidate of utilitiesForRule(rule, variants)) {
+    for (const candidate of utilitiesForRule(rule, variants, design.merge)) {
       if (isGroupMarker(candidate)) continue;
 
       const css = design.candidateCss(candidate);
@@ -149,7 +154,7 @@ export function formatStyleDiagnostic(diagnostic: StyleDiagnostic): string {
 
 function createDiagnostic(
   code: StyleDiagnosticCode,
-  rule: StyleManifestRule,
+  rule: ResolvedStyleRule,
   utilities: readonly string[]
 ): StyleDiagnostic {
   return {
@@ -158,18 +163,6 @@ function createDiagnostic(
     rule,
     utilities: [...new Set(utilities)],
   };
-}
-
-function collectGroupOwners(rules: readonly StyleManifestRule[], variants: readonly string[]): ReadonlySet<string> {
-  const owners = new Set<string>();
-
-  for (const rule of rules) {
-    for (const utility of utilitiesForRule(rule, variants)) {
-      if (isGroupMarker(utility)) owners.add(utility);
-    }
-  }
-
-  return owners;
 }
 
 function usesPeerRelationship(candidate: string): boolean {
@@ -311,6 +304,12 @@ function splitCandidate(candidate: string): { readonly variants: readonly string
 
 function isCandidateRoot(selector: Selector, candidate: string): boolean {
   return selector.length === 1 && selector[0]?.type === 'class' && selector[0].name === candidate;
+}
+
+function isAnchoredToCandidate(selector: Selector, candidate: string): boolean {
+  return selector.some(
+    (component) => component.type === 'nesting' || (component.type === 'class' && component.name === candidate)
+  );
 }
 
 function selectorIsComplex(selector: Selector, groupOwners: ReadonlySet<string>): boolean {

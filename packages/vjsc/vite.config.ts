@@ -13,6 +13,9 @@ const pack: PackUserConfig = {
     'components/index': './src/components/index.ts',
     'components/jsx-runtime': './src/components/jsx-runtime.ts',
     'components/jsx-dev-runtime': './src/components/jsx-dev-runtime.ts',
+    'graph/index': './src/graph/index.ts',
+    'html-runtime/jsx-runtime': './src/html-runtime/jsx-runtime.ts',
+    'html-runtime/jsx-dev-runtime': './src/html-runtime/jsx-dev-runtime.ts',
     'target/index': './src/target/index.ts',
     'target/jsx-runtime': './src/target/jsx-runtime.ts',
     'target/jsx-dev-runtime': './src/target/jsx-dev-runtime.ts',
@@ -30,13 +33,20 @@ export default defineConfig({
       build: {
         command: 'vp pack && node scripts/check-exports.mjs',
         dependsOn: workspaceTaskDependencies(),
-        input: cachedTaskInputs,
-        output: ['dist/**'],
+        cache: {
+          input: cachedTaskInputs,
+          output: ['dist/**'],
+        },
       },
       'test:ci': packageTestTask(),
     },
   },
   test: {
+    // Vitest v4 compatibility: preserve mock call history.
+    // Remove after tests no longer rely on calls from setup or earlier tests.
+    // https://viteplus.dev/guide/vitest-v5#remove-unneeded-compatibility-settings
+    // https://vitest.dev/guide/migration/#clearmocks-is-enabled-by-default
+    clearMocks: false,
     include: ['src/**/*.test.{ts,tsx}'],
   },
   pack,

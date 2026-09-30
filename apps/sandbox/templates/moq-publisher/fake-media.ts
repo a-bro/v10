@@ -11,7 +11,7 @@ import type {
   MediaPublishStats,
   MediaPublishStatsCapability,
 } from '@videojs/media';
-import { HTMLVideoElementHost, type HTMLVideoTargetLike } from '@videojs/media/dom/video-host';
+import { HTMLVideoAdapter, type HTMLVideoTargetLike } from '@videojs/media/dom';
 
 const CONNECT_DELAY_MS = 800;
 const STOP_DELAY_MS = 250;
@@ -32,7 +32,7 @@ const FAKE_AUDIO_BITRATE = 1.28e5;
  * runs a third, audio-only pipeline for the explicit mic seam, so a mic-only publish is drivable here too.
  */
 export class FakePublishMedia
-  extends HTMLVideoElementHost
+  extends HTMLVideoAdapter
   implements
     MediaPublishCapability,
     MediaCaptureSourceCapability,

@@ -23,13 +23,17 @@ import tsx from 'shiki/langs/tsx.mjs';
 import yaml from 'shiki/langs/yaml.mjs';
 import svgr from 'vite-plugin-svgr';
 
-import llmsMarkdown from './integrations/llms-markdown';
+import { cssExclude, viteCssTarget } from '../build/css-targets.ts';
+import { reactCompilerPlugin } from '../build/react-compiler.ts';
+import llmsMarkdown from './integrations/llms-integration';
+import { llmsIndexPaths } from './integrations/llms-sections';
 import { demoPlaceholderPlugin } from './scripts/replace-demo-placeholders.ts';
 import { PRERELEASE_URL, PRODUCTION_URL } from './src/consts.ts';
 import { satteriCdnVersion } from './src/utils/satteriCdnVersion';
 import { satteriCodeFrame } from './src/utils/satteriCodeFrame';
 import { satteriConditionalHeadings } from './src/utils/satteriConditionalHeadings';
 import { satteriReadingTime } from './src/utils/satteriReadingTime';
+import { satteriRelatedLinks } from './src/utils/satteriRelatedLinks';
 import { shikiNotationTransformers } from './src/utils/shikiNotationTransformers';
 import { shikiStripPreStyle } from './src/utils/shikiStripPreStyle';
 
@@ -50,6 +54,15 @@ const SITE_URL =
     : process.env.BRANCH === 'main'
       ? PRERELEASE_URL.origin
       : process.env.DEPLOY_PRIME_URL || PRODUCTION_URL.origin;
+
+// @astrojs/react does not expose @vitejs/plugin-react's native compiler option yet. Register only the compiler here;
+// the remaining plugins are already registered by Astro's integration. Limit compilation to site source because
+// workspace libraries resolve outside node_modules and already ship compiled output.
+const siteReactCompilerPlugin = reactCompilerPlugin({
+  compiler: true,
+  exclude: [/\.astro$/, /node_modules/],
+  include: /[/\\]site[/\\]src[/\\].*\.[jt]sx?$/,
+});
 
 // https://astro.build/config
 export default defineConfig({
@@ -79,9 +92,6 @@ export default defineConfig({
       MUX_TOKEN_SECRET: envField.string({ context: 'server', access: 'secret', optional: true }),
     },
   },
-  redirects: {
-    // Redirects are configured in netlify.toml
-  },
   integrations: [
     // Only register Sentry when the upload token is present (i.e. production
     // deploys). Without a token the integration still initializes the vite
@@ -98,21 +108,11 @@ export default defineConfig({
       : []),
     mdx({ extendMarkdownConfig: true }),
     sitemap({
-      // llms-markdown.ts auto-generates per-framework sub-indexes, but sitemap
-      // entries are hardcoded here. Add a new line when adding a framework.
-      customPages: [
-        `${SITE_URL}/llms.txt`,
-        `${SITE_URL}/blog/llms.txt`,
-        `${SITE_URL}/docs/framework/html/llms.txt`,
-        `${SITE_URL}/docs/framework/react/llms.txt`,
-      ],
+      // The llms indexes are written after the build, so the sitemap cannot discover them from the page list.
+      customPages: llmsIndexPaths().map((path) => `${SITE_URL}${path}`),
     }),
     llmsMarkdown(),
-    react({
-      babel: {
-        plugins: [['babel-plugin-react-compiler', { target: '19' }]],
-      },
-    }),
+    react(),
   ],
   prefetch: {
     prefetchAll: true,
@@ -150,7 +150,13 @@ export default defineConfig({
     // independently of the Markdown processor, so highlighting is configured
     // here while the processor's custom transforms live in `mdastPlugins`.
     processor: satteri({
-      mdastPlugins: [satteriReadingTime(), satteriConditionalHeadings(), satteriCdnVersion(), satteriCodeFrame()],
+      mdastPlugins: [
+        satteriReadingTime(),
+        satteriRelatedLinks(),
+        satteriConditionalHeadings(),
+        satteriCdnVersion(),
+        satteriCodeFrame(),
+      ],
     }),
   },
 
@@ -169,7 +175,10 @@ export default defineConfig({
     // SVG → React component transform. We use SVGR instead of Astro's
     // experimental svg feature because: (1) React islands need React
     // components, and (2) SVGR runs SVGO for automatic SVG optimization.
-    plugins: [demoPlaceholderPlugin(), tailwindcss(), svgr()],
+    plugins: [siteReactCompilerPlugin, demoPlaceholderPlugin(), tailwindcss(), svgr()],
+    // Minify for the root `browserslist` without rewriting the skins' `:dir()` and `light-dark()` for every browser.
+    build: { cssTarget: viteCssTarget },
+    css: { lightningcss: { exclude: cssExclude } },
     optimizeDeps: {
       // @resvg/resvg-js loads a native .node binding for the server-only OG
       // image route, so Vite's dev optimizer must leave it external.

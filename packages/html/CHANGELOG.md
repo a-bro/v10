@@ -1,5 +1,275 @@
 # Changelog
 
+## [10.0.0-rc.4](https://github.com/videojs/v10/compare/@videojs/html@10.0.0-rc.3...@videojs/html@10.0.0-rc.4) (2026-09-26)
+
+
+### Miscellaneous Chores
+
+* **@videojs/html:** Synchronize videojs versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @videojs/core bumped to 10.0.0-rc.4
+    * @videojs/element bumped to 10.0.0-rc.4
+    * @videojs/media bumped to 10.0.0-rc.4
+    * @videojs/native-hls-video bumped to 10.0.0-rc.4
+    * @videojs/spf bumped to 10.0.0-rc.4
+    * @videojs/store bumped to 10.0.0-rc.4
+    * @videojs/utils bumped to 10.0.0-rc.4
+  * devDependencies
+    * @videojs/cloudflare-video bumped to 10.0.0-rc.4
+    * @videojs/dash-video bumped to 10.0.0-rc.4
+    * @videojs/google-cast bumped to 10.0.0-rc.4
+    * @videojs/hlsjs-video bumped to 10.0.0-rc.4
+    * @videojs/icons bumped to 10.0.0-rc.4
+    * @videojs/mux-audio bumped to 10.0.0-rc.4
+    * @videojs/mux-data bumped to 10.0.0-rc.4
+    * @videojs/mux-video bumped to 10.0.0-rc.4
+    * @videojs/shaka-video bumped to 10.0.0-rc.4
+    * @videojs/skins bumped to 10.0.0-rc.4
+    * @videojs/spotify-audio bumped to 10.0.0-rc.4
+    * @videojs/tiktok-video bumped to 10.0.0-rc.4
+    * @videojs/twitch-video bumped to 10.0.0-rc.4
+    * @videojs/vimeo-video bumped to 10.0.0-rc.4
+    * @videojs/wistia-video bumped to 10.0.0-rc.4
+    * @videojs/youtube-video bumped to 10.0.0-rc.4
+  * peerDependencies
+    * @videojs/cloudflare-video bumped to 10.0.0-rc.4
+    * @videojs/dash-video bumped to 10.0.0-rc.4
+    * @videojs/google-cast bumped to 10.0.0-rc.4
+    * @videojs/hlsjs-video bumped to 10.0.0-rc.4
+    * @videojs/mux-audio bumped to 10.0.0-rc.4
+    * @videojs/mux-data bumped to 10.0.0-rc.4
+    * @videojs/mux-video bumped to 10.0.0-rc.4
+    * @videojs/shaka-video bumped to 10.0.0-rc.4
+    * @videojs/spotify-audio bumped to 10.0.0-rc.4
+    * @videojs/tiktok-video bumped to 10.0.0-rc.4
+    * @videojs/twitch-video bumped to 10.0.0-rc.4
+    * @videojs/vimeo-video bumped to 10.0.0-rc.4
+    * @videojs/wistia-video bumped to 10.0.0-rc.4
+    * @videojs/youtube-video bumped to 10.0.0-rc.4
+
+## [10.0.0-rc.3](https://github.com/videojs/v10/compare/@videojs/html@10.0.0-rc.2...@videojs/html@10.0.0-rc.3) (2026-09-25)
+
+
+### Features
+
+* about-this-player page and a help link in every player ([#2758](https://github.com/videojs/v10/issues/2758)) ([8a538a5](https://github.com/videojs/v10/commit/8a538a572945c2bb01cb79d38f420ec143a4239c))
+* **html:** export translateText from html entry points ([#2947](https://github.com/videojs/v10/issues/2947)) ([ca3ae5a](https://github.com/videojs/v10/commit/ca3ae5a92a86549a60bf64c24fdc74c2a38cb98e))
+* **installation:** add versioned agent instructions ([#2948](https://github.com/videojs/v10/issues/2948)) ([a602f22](https://github.com/videojs/v10/commit/a602f220aedf9c2800983daade6ca298ada007ab))
+* **skin:** add title display ([#2748](https://github.com/videojs/v10/issues/2748)) ([bc007bd](https://github.com/videojs/v10/commit/bc007bd9c01083507f493883b6eb047992937f79))
+* **skin:** slot the slider thumbnail image ([#2700](https://github.com/videojs/v10/issues/2700)) ([b68563f](https://github.com/videojs/v10/commit/b68563f62595e19c8bfc0d3c88147ea74c4473ef))
+
+
+### Bug Fixes
+
+* **core:** apply popup starting styles before showing ([#2715](https://github.com/videojs/v10/issues/2715)) ([a80aeca](https://github.com/videojs/v10/commit/a80aecadecc1a7dee643c6a7200cc09dfa8c4f9e))
+* **html:** register skin properties in the host document ([#2750](https://github.com/videojs/v10/issues/2750)) ([255e68c](https://github.com/videojs/v10/commit/255e68c8b0d5c6a53b58c38dbfeff43b4710a2e6))
+* **packages:** keep the time slider interactive without the buffer feature ([#2869](https://github.com/videojs/v10/issues/2869)) ([1c629d6](https://github.com/videojs/v10/commit/1c629d612dd976bf84d404178a2cdb728a63d72e))
+* **packages:** prevent menu highlight flicker ([#2969](https://github.com/videojs/v10/issues/2969)) ([461dbcf](https://github.com/videojs/v10/commit/461dbcfdde0c13481f6604cfe5632f9af6232416))
+* **site:** improve markdown for agents ([#2883](https://github.com/videojs/v10/issues/2883)) ([d5c8e3c](https://github.com/videojs/v10/commit/d5c8e3cde77cbbe74ecc6878dbd7862db8628bfa))
+
+
+### Performance Improvements
+
+* **site:** faster docs dev server start ([#2698](https://github.com/videojs/v10/issues/2698)) ([33d3887](https://github.com/videojs/v10/commit/33d38873ed5337a5695eaa426a5ebfbea61356d2))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @videojs/core bumped to 10.0.0-rc.3
+    * @videojs/element bumped to 10.0.0-rc.3
+    * @videojs/media bumped to 10.0.0-rc.3
+    * @videojs/native-hls-video bumped to 10.0.0-rc.3
+    * @videojs/spf bumped to 10.0.0-rc.3
+    * @videojs/store bumped to 10.0.0-rc.3
+    * @videojs/utils bumped to 10.0.0-rc.3
+  * devDependencies
+    * @videojs/cloudflare-video bumped to 10.0.0-rc.3
+    * @videojs/dash-video bumped to 10.0.0-rc.3
+    * @videojs/google-cast bumped to 10.0.0-rc.3
+    * @videojs/hlsjs-video bumped to 10.0.0-rc.3
+    * @videojs/icons bumped to 10.0.0-rc.3
+    * @videojs/mux-audio bumped to 10.0.0-rc.3
+    * @videojs/mux-data bumped to 10.0.0-rc.3
+    * @videojs/mux-video bumped to 10.0.0-rc.3
+    * @videojs/shaka-video bumped to 10.0.0-rc.3
+    * @videojs/skins bumped to 10.0.0-rc.3
+    * @videojs/spotify-audio bumped to 10.0.0-rc.3
+    * @videojs/tiktok-video bumped to 10.0.0-rc.3
+    * @videojs/twitch-video bumped to 10.0.0-rc.3
+    * @videojs/vimeo-video bumped to 10.0.0-rc.3
+    * @videojs/wistia-video bumped to 10.0.0-rc.3
+    * @videojs/youtube-video bumped to 10.0.0-rc.3
+  * peerDependencies
+    * @videojs/cloudflare-video bumped to 10.0.0-rc.3
+    * @videojs/dash-video bumped to 10.0.0-rc.3
+    * @videojs/google-cast bumped to 10.0.0-rc.3
+    * @videojs/hlsjs-video bumped to 10.0.0-rc.3
+    * @videojs/mux-audio bumped to 10.0.0-rc.3
+    * @videojs/mux-data bumped to 10.0.0-rc.3
+    * @videojs/mux-video bumped to 10.0.0-rc.3
+    * @videojs/shaka-video bumped to 10.0.0-rc.3
+    * @videojs/spotify-audio bumped to 10.0.0-rc.3
+    * @videojs/tiktok-video bumped to 10.0.0-rc.3
+    * @videojs/twitch-video bumped to 10.0.0-rc.3
+    * @videojs/vimeo-video bumped to 10.0.0-rc.3
+    * @videojs/wistia-video bumped to 10.0.0-rc.3
+    * @videojs/youtube-video bumped to 10.0.0-rc.3
+
+## [10.0.0-rc.2](https://github.com/videojs/v10/compare/@videojs/html@10.0.0-rc.1...@videojs/html@10.0.0-rc.2) (2026-09-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* **html:** make thumbnail images composable ([#2572](https://github.com/videojs/v10/issues/2572))
+* **react:** make thumbnail composable ([#2566](https://github.com/videojs/v10/issues/2566))
+* **react:** make poster composable ([#2563](https://github.com/videojs/v10/issues/2563))
+
+### Features
+
+* **html:** make thumbnail images composable ([#2572](https://github.com/videojs/v10/issues/2572)) ([6dfdce5](https://github.com/videojs/v10/commit/6dfdce50a8717573268841dbc6ed8c2b02b9108d))
+* **packages:** handle controls before media metadata ([#2525](https://github.com/videojs/v10/issues/2525)) ([feed475](https://github.com/videojs/v10/commit/feed475b42186340162b92e3366f132729b6b0f9))
+* **react:** make poster composable ([#2563](https://github.com/videojs/v10/issues/2563)) ([def9bf2](https://github.com/videojs/v10/commit/def9bf21d39cce091bf31c1b36651fceb8c25687))
+* **react:** make thumbnail composable ([#2566](https://github.com/videojs/v10/issues/2566)) ([55b36ab](https://github.com/videojs/v10/commit/55b36ab31a07ae54ca084bd470a61cfc760a8e13))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @videojs/core bumped to 10.0.0-rc.2
+    * @videojs/element bumped to 10.0.0-rc.2
+    * @videojs/media bumped to 10.0.0-rc.2
+    * @videojs/native-hls-video bumped to 10.0.0-rc.2
+    * @videojs/spf bumped to 10.0.0-rc.2
+    * @videojs/store bumped to 10.0.0-rc.2
+    * @videojs/utils bumped to 10.0.0-rc.2
+  * devDependencies
+    * @videojs/cloudflare-video bumped to 10.0.0-rc.2
+    * @videojs/dash-video bumped to 10.0.0-rc.2
+    * @videojs/google-cast bumped to 10.0.0-rc.2
+    * @videojs/hlsjs-video bumped to 10.0.0-rc.2
+    * @videojs/icons bumped to 10.0.0-rc.2
+    * @videojs/mux-audio bumped to 10.0.0-rc.2
+    * @videojs/mux-data bumped to 10.0.0-rc.2
+    * @videojs/mux-video bumped to 10.0.0-rc.2
+    * @videojs/shaka-video bumped to 10.0.0-rc.2
+    * @videojs/skins bumped to 10.0.0-rc.2
+    * @videojs/spotify-audio bumped to 10.0.0-rc.2
+    * @videojs/tiktok-video bumped to 10.0.0-rc.2
+    * @videojs/twitch-video bumped to 10.0.0-rc.2
+    * @videojs/vimeo-video bumped to 10.0.0-rc.2
+    * @videojs/wistia-video bumped to 10.0.0-rc.2
+    * @videojs/youtube-video bumped to 10.0.0-rc.2
+  * peerDependencies
+    * @videojs/cloudflare-video bumped to 10.0.0-rc.2
+    * @videojs/dash-video bumped to 10.0.0-rc.2
+    * @videojs/google-cast bumped to 10.0.0-rc.2
+    * @videojs/hlsjs-video bumped to 10.0.0-rc.2
+    * @videojs/mux-audio bumped to 10.0.0-rc.2
+    * @videojs/mux-data bumped to 10.0.0-rc.2
+    * @videojs/mux-video bumped to 10.0.0-rc.2
+    * @videojs/shaka-video bumped to 10.0.0-rc.2
+    * @videojs/spotify-audio bumped to 10.0.0-rc.2
+    * @videojs/tiktok-video bumped to 10.0.0-rc.2
+    * @videojs/twitch-video bumped to 10.0.0-rc.2
+    * @videojs/vimeo-video bumped to 10.0.0-rc.2
+    * @videojs/wistia-video bumped to 10.0.0-rc.2
+    * @videojs/youtube-video bumped to 10.0.0-rc.2
+
+## [10.0.0-rc.1](https://github.com/videojs/v10/compare/@videojs/html@10.0.0-beta.32...@videojs/html@10.0.0-rc.1) (2026-09-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* **packages:** adapter renaming ([#2602](https://github.com/videojs/v10/issues/2602))
+* **packages:** MediaComponent => MediaExtension ([#2601](https://github.com/videojs/v10/issues/2601))
+* **packages:** extension renaming ([#2600](https://github.com/videojs/v10/issues/2600))
+* **packages:** playback adapters packages ([#2567](https://github.com/videojs/v10/issues/2567))
+* **packages:** move integrations to extension paths ([#2577](https://github.com/videojs/v10/issues/2577))
+
+### Features
+
+* **html:** generate VJSC skin templates ([#2546](https://github.com/videojs/v10/issues/2546)) ([70a1230](https://github.com/videojs/v10/commit/70a1230d44cbf0980253c1272a8106d6e47c0f48))
+* **html:** publish skin stylesheets to the CDN build ([#2340](https://github.com/videojs/v10/issues/2340)) ([a67ffb4](https://github.com/videojs/v10/commit/a67ffb437161654d704dd0e3e4ecde2a6c4fcdad))
+* **packages:** add wistia video media ([#2305](https://github.com/videojs/v10/issues/2305)) ([306c733](https://github.com/videojs/v10/commit/306c7333fc100308a7ac59c8edaa08dbc5c64d58))
+* **packages:** share menu option state across targets ([#2528](https://github.com/videojs/v10/issues/2528)) ([4392cd6](https://github.com/videojs/v10/commit/4392cd6f7fa92dd3bb329b5a92206f5bf27a75b2))
+* **sandbox:** fold the skins playground into the sandbox ([#2586](https://github.com/videojs/v10/issues/2586)) ([ee38b1d](https://github.com/videojs/v10/commit/ee38b1d81ee64af72a6d9859094444fe635cc332))
+* **vjsc:** add named render targets ([#2527](https://github.com/videojs/v10/issues/2527)) ([5b606d2](https://github.com/videojs/v10/commit/5b606d2026bb9528167f64b4b731145ceb1224f2))
+
+
+### Bug Fixes
+
+* **html:** remove tailwind skin elements ([#2434](https://github.com/videojs/v10/issues/2434)) ([45f6f28](https://github.com/videojs/v10/commit/45f6f2876fba5d8b82b3ae96b0bc6704483fa011))
+* **packages:** align dialog styles across skins ([#2481](https://github.com/videojs/v10/issues/2481)) ([9601006](https://github.com/videojs/v10/commit/9601006ede03d295f1c2811db6eee0f768e30bd3))
+* **packages:** isolate focused slider hotkeys ([#2474](https://github.com/videojs/v10/issues/2474)) ([0f7b08f](https://github.com/videojs/v10/commit/0f7b08f8a9c8948cf35a0b1c8d4d411f1bf166c3))
+* **packages:** preserve fullscreen after pointer activation ([#2472](https://github.com/videojs/v10/issues/2472)) ([b526c44](https://github.com/videojs/v10/commit/b526c444efae99873946eafa607673b19c6978f0))
+* **packages:** reject invalid gesture types ([#2473](https://github.com/videojs/v10/issues/2473)) ([0da416a](https://github.com/videojs/v10/commit/0da416aa3a5d08bc23ec968593b7f3beee00d204))
+* **packages:** restore ejected player registration and slider press locking ([#2505](https://github.com/videojs/v10/issues/2505)) ([36bb836](https://github.com/videojs/v10/commit/36bb83600622aff75169f4fe5d039f17e9f1f7d9))
+* **packages:** scope error dialogs to player containers ([#2449](https://github.com/videojs/v10/issues/2449)) ([9fbc979](https://github.com/videojs/v10/commit/9fbc9790189b5df8d5d047eaf01605d6e8d7fb6b))
+* **packages:** share input action defaults ([#2484](https://github.com/videojs/v10/issues/2484)) ([db1221c](https://github.com/videojs/v10/commit/db1221c7ebd019b58dced646fc4223d816e48bca))
+* **skins:** harden shadcn registry delivery ([#2576](https://github.com/videojs/v10/issues/2576)) ([331cf7b](https://github.com/videojs/v10/commit/331cf7b5a602acd81f392bcb03d1a26c50ad1898))
+
+
+### Code Refactoring
+
+* **packages:** adapter renaming ([#2602](https://github.com/videojs/v10/issues/2602)) ([b964889](https://github.com/videojs/v10/commit/b964889fdf68a4cdaf4686ef96bb0e8c8f2f4abd))
+* **packages:** extension renaming ([#2600](https://github.com/videojs/v10/issues/2600)) ([7075d1f](https://github.com/videojs/v10/commit/7075d1f9e111d6d0eb70f319c6d05beacb88d833))
+* **packages:** MediaComponent =&gt; MediaExtension ([#2601](https://github.com/videojs/v10/issues/2601)) ([eebe675](https://github.com/videojs/v10/commit/eebe675408e50bcd3893d01f56dbb7a92a2fb5d1))
+* **packages:** move integrations to extension paths ([#2577](https://github.com/videojs/v10/issues/2577)) ([8859237](https://github.com/videojs/v10/commit/88592377bfe24d79c0cec8ee1538336479d2c490))
+* **packages:** playback adapters packages ([#2567](https://github.com/videojs/v10/issues/2567)) ([12b08e3](https://github.com/videojs/v10/commit/12b08e3b0c3c07e5948f74a8cf6fce96c8b8eba7))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @videojs/core bumped to 10.0.0-rc.1
+    * @videojs/element bumped to 10.0.0-rc.1
+    * @videojs/media bumped to 10.0.0-rc.1
+    * @videojs/native-hls-video bumped to 10.0.0-rc.1
+    * @videojs/spf bumped to 10.0.0-rc.1
+    * @videojs/store bumped to 10.0.0-rc.1
+    * @videojs/utils bumped to 10.0.0-rc.1
+  * devDependencies
+    * @videojs/cloudflare-video bumped to 10.0.0-rc.1
+    * @videojs/dash-video bumped to 10.0.0-rc.1
+    * @videojs/google-cast bumped to 10.0.0-rc.1
+    * @videojs/hlsjs-video bumped to 10.0.0-rc.1
+    * @videojs/icons bumped to 10.0.0-rc.1
+    * @videojs/mux-audio bumped to 10.0.0-rc.1
+    * @videojs/mux-data bumped to 10.0.0-rc.1
+    * @videojs/mux-video bumped to 10.0.0-rc.1
+    * @videojs/shaka-video bumped to 10.0.0-rc.1
+    * @videojs/skins bumped to 10.0.0-rc.1
+    * @videojs/spotify-audio bumped to 10.0.0-rc.1
+    * @videojs/tiktok-video bumped to 10.0.0-rc.1
+    * @videojs/twitch-video bumped to 10.0.0-rc.1
+    * @videojs/vimeo-video bumped to 10.0.0-rc.1
+    * @videojs/wistia-video bumped to 10.0.0-rc.1
+    * @videojs/youtube-video bumped to 10.0.0-rc.1
+  * peerDependencies
+    * @videojs/cloudflare-video bumped to 10.0.0-rc.1
+    * @videojs/dash-video bumped to 10.0.0-rc.1
+    * @videojs/google-cast bumped to 10.0.0-rc.1
+    * @videojs/hlsjs-video bumped to 10.0.0-rc.1
+    * @videojs/mux-audio bumped to 10.0.0-rc.1
+    * @videojs/mux-data bumped to 10.0.0-rc.1
+    * @videojs/mux-video bumped to 10.0.0-rc.1
+    * @videojs/shaka-video bumped to 10.0.0-rc.1
+    * @videojs/spotify-audio bumped to 10.0.0-rc.1
+    * @videojs/tiktok-video bumped to 10.0.0-rc.1
+    * @videojs/twitch-video bumped to 10.0.0-rc.1
+    * @videojs/vimeo-video bumped to 10.0.0-rc.1
+    * @videojs/wistia-video bumped to 10.0.0-rc.1
+    * @videojs/youtube-video bumped to 10.0.0-rc.1
+
 ## [10.0.0-beta.32](https://github.com/videojs/v10/compare/@videojs/html@10.0.0-beta.31...@videojs/html@10.0.0-beta.32) (2026-08-26)
 
 

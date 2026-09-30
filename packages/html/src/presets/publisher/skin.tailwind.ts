@@ -1,5 +1,10 @@
 import { cameraText, enableDevicesText, microphoneText } from '@videojs/core/i18n/text/publish';
 import { renderIcon } from '@videojs/icons/render';
+import { createTemplate } from '@videojs/utils/dom';
+import { cn } from '@videojs/utils/style';
+
+import { renderText } from '../../i18n/render-text';
+import { SkinElement } from '../skin';
 import {
   button,
   buttonGroup,
@@ -19,12 +24,7 @@ import {
   publishTimer,
   root,
   spacer,
-} from '@videojs/skins/default/tailwind/publisher.tailwind';
-import { createTemplate } from '@videojs/utils/dom';
-import { cn } from '@videojs/utils/style';
-
-import { renderText } from '../../i18n/render-text';
-import { SkinElement } from '../skin';
+} from './legacy-skin/default/tailwind/publisher.tailwind';
 
 function getTemplateHTML() {
   return /*html*/ `

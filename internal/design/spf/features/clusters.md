@@ -156,7 +156,7 @@ Fetching, parsing, and modeling HLS / HAS media — the data structures the rest
 
 **Signals.** Manifest fetching, multivariant playlist parsing, media playlist parsing, presentation modeling; `parseMultivariantPlaylist`, `parseMediaPlaylist`; state slot `presentation` (resolved vs unresolved); `presentation-resolved` state-machine transitions; `PartiallyResolvedTextTrack`-style modeling shapes; HLS attribute extraction.
 
-**Docs.** None yet. The architectural deep-dive [`presentation-modeling.md`](../presentation-modeling.md) covers the format-neutral data shape and per-track resolution layer that feature docs in this cluster would consume.
+**Docs.** `chapters` (its session-data slice: `#EXT-X-SESSION-DATA` recorded under `presentation.metadata`, read via `getSessionData`). The architectural deep-dive [`presentation-modeling.md`](../presentation-modeling.md) covers the format-neutral data shape and per-track resolution layer that feature docs in this cluster consume.
 
 **Foundational primitives.** `Presentation` data shape; `resolvePresentation` behavior + the per-track `resolve*Track` family that patches resolved tracks back into `presentation`.
 
@@ -254,9 +254,9 @@ Key system handling for protected content — EME, license fetch, key-rotation, 
 
 **Signals.** EME, `MediaKeys`, `requestMediaKeySystemAccess`, key system identifiers (Widevine / PlayReady / FairPlay / FairPlay-AirPlay); `#EXT-X-KEY` in playlists; license server URLs; security level constraints; encrypted-event handling on the SourceBuffer.
 
-**Docs.** `drm-support` (foundation; GitHub issue #1411). Key-system capability probing is owned by `capability-probing` (cluster D); this cluster owns EME setup, license handling, and key delivery downstream of probing's verdict.
+**Docs.** `drm-support` (foundation; GitHub issue #1776). Key-system capability probing is owned by `capability-probing` (cluster D); this cluster owns EME setup, license handling, and key delivery downstream of probing's verdict.
 
-**Foundational primitives.** EME + license-handling base, under issue #1411.
+**Foundational primitives.** EME + license-handling base, under issue #1776.
 
 **Maps to Notion cluster F** ("DRM").
 

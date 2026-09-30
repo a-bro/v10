@@ -48,8 +48,8 @@ describe('MoqPublishVideo', () => {
     el.setAttribute('publish-endpoint', 'https://relay.example.com/moq');
     el.setAttribute('publish-namespace', 'live/abc123');
 
-    expect(el.host.publishEndpoint).toBe('https://relay.example.com/moq');
-    expect(el.host.publishNamespace).toBe('live/abc123');
+    expect(el.adapter.publishEndpoint).toBe('https://relay.example.com/moq');
+    expect(el.adapter.publishNamespace).toBe('live/abc123');
   });
 
   it('reflects publisher property writes back to attributes', () => {
@@ -60,7 +60,7 @@ describe('MoqPublishVideo', () => {
 
     expect(el.getAttribute('publish-endpoint')).toBe('https://relay.example.com/moq');
     expect(el.getAttribute('publish-namespace')).toBe('live/abc123');
-    expect(el.host.publishEndpoint).toBe('https://relay.example.com/moq');
+    expect(el.adapter.publishEndpoint).toBe('https://relay.example.com/moq');
   });
 
   it('does not mirror publisher attributes onto the preview video', () => {
@@ -75,10 +75,10 @@ describe('MoqPublishVideo', () => {
     const el = createMoqPublishVideo();
 
     el.setAttribute('camera-active', '');
-    expect(el.host.cameraActive).toBe(true);
+    expect(el.adapter.cameraActive).toBe(true);
 
     el.removeAttribute('camera-active');
-    expect(el.host.cameraActive).toBe(false);
+    expect(el.adapter.cameraActive).toBe(false);
   });
 
   it('clears the camera-active attribute when the engine consumes the intent, keeping property retry live', async () => {
@@ -95,8 +95,8 @@ describe('MoqPublishVideo', () => {
       // follow, or the next property write toggles an already-present
       // attribute (no attributeChangedCallback) and retry is dead.
       await vi.waitFor(() => {
-        expect(el.host.cameraState).toBe('denied');
-        expect(el.host.cameraActive).toBe(false);
+        expect(el.adapter.cameraState).toBe('denied');
+        expect(el.adapter.cameraActive).toBe(false);
         expect(el.hasAttribute('camera-active')).toBe(false);
       });
 
@@ -117,13 +117,13 @@ describe('MoqPublishVideo', () => {
     const el = createMoqPublishVideo();
 
     el.setAttribute('mic-active', '');
-    expect(el.host.micActive).toBe(true);
+    expect(el.adapter.micActive).toBe(true);
     // No video source rides along — audio-only publish (issue #26).
-    expect(el.host.cameraActive).toBe(false);
-    expect(el.host.screenShareActive).toBe(false);
+    expect(el.adapter.cameraActive).toBe(false);
+    expect(el.adapter.screenShareActive).toBe(false);
 
     el.removeAttribute('mic-active');
-    expect(el.host.micActive).toBe(false);
+    expect(el.adapter.micActive).toBe(false);
   });
 
   it('clears the mic-active attribute when the engine consumes the intent, keeping property retry live', async () => {
@@ -140,8 +140,8 @@ describe('MoqPublishVideo', () => {
       // follow, or the next property write toggles an already-present
       // attribute (no attributeChangedCallback) and retry is dead.
       await vi.waitFor(() => {
-        expect(el.host.micState).toBe('denied');
-        expect(el.host.micActive).toBe(false);
+        expect(el.adapter.micState).toBe('denied');
+        expect(el.adapter.micActive).toBe(false);
         expect(el.hasAttribute('mic-active')).toBe(false);
       });
 
@@ -163,12 +163,12 @@ describe('MoqPublishVideo', () => {
 
     el.setAttribute('camera-active', '');
     el.setAttribute('screen-share-active', '');
-    expect(el.host.cameraActive).toBe(true);
-    expect(el.host.screenShareActive).toBe(true);
+    expect(el.adapter.cameraActive).toBe(true);
+    expect(el.adapter.screenShareActive).toBe(true);
 
     el.removeAttribute('screen-share-active');
-    expect(el.host.screenShareActive).toBe(false);
+    expect(el.adapter.screenShareActive).toBe(false);
     // The camera is untouched by releasing screen share — additive.
-    expect(el.host.cameraActive).toBe(true);
+    expect(el.adapter.cameraActive).toBe(true);
   });
 });

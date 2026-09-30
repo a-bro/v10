@@ -9,7 +9,7 @@ import { MoqPublishMediaMixin, type MoqPublishMediaOptions } from '../adapter';
 
 /**
  * EventTarget base so the adapter's event bridge has a `dispatchEvent` to land on — the same seam a real media host
- * (e.g. `HTMLVideoElementHost`) provides.
+ * (e.g. `HTMLVideoAdapter`) provides.
  */
 class TestPublishMedia extends MoqPublishMediaMixin(EventTarget) {}
 

@@ -1,5 +1,55 @@
 # Changelog
 
+## [10.0.0-rc.4](https://github.com/videojs/v10/compare/@videojs/utils@10.0.0-rc.3...@videojs/utils@10.0.0-rc.4) (2026-09-26)
+
+
+### Miscellaneous Chores
+
+* **@videojs/utils:** Synchronize videojs versions
+
+## [10.0.0-rc.3](https://github.com/videojs/v10/compare/@videojs/utils@10.0.0-rc.2...@videojs/utils@10.0.0-rc.3) (2026-09-25)
+
+
+### Features
+
+* **spf:** add EME-based DRM support to the HLS engine ([#2291](https://github.com/videojs/v10/issues/2291)) ([fd6785e](https://github.com/videojs/v10/commit/fd6785e00df4ed705ed4c9479fcfdfbaf221f7e1))
+
+
+### Bug Fixes
+
+* **core:** keep controls visible when seeking in Safari 16 ([#2962](https://github.com/videojs/v10/issues/2962)) ([2f5cf27](https://github.com/videojs/v10/commit/2f5cf2765315199e45623f5760b20d9a52acf4db))
+* **core:** position and hide popups without the Popover API ([#2963](https://github.com/videojs/v10/issues/2963)) ([b0e24df](https://github.com/videojs/v10/commit/b0e24dfcbb2738dfdf0b6250880b42e5f9dd0aeb))
+* **packages:** guard Intl.ListFormat and AbortSignal.any ([#2964](https://github.com/videojs/v10/issues/2964)) ([14aceee](https://github.com/videojs/v10/commit/14aceee2c813b65076bcbcf9613467ae3a8fe5de))
+* **utils:** detect constructable stylesheets before creating one ([#2967](https://github.com/videojs/v10/issues/2967)) ([4c4c5d4](https://github.com/videojs/v10/commit/4c4c5d49a966f940a05c6b4653c5ab2c2f490860))
+
+
+### Performance Improvements
+
+* **site:** faster docs dev server start ([#2698](https://github.com/videojs/v10/issues/2698)) ([33d3887](https://github.com/videojs/v10/commit/33d38873ed5337a5695eaa426a5ebfbea61356d2))
+
+## [10.0.0-rc.2](https://github.com/videojs/v10/compare/@videojs/utils@10.0.0-rc.1...@videojs/utils@10.0.0-rc.2) (2026-09-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* **html:** make thumbnail images composable ([#2572](https://github.com/videojs/v10/issues/2572))
+
+### Features
+
+* **html:** make thumbnail images composable ([#2572](https://github.com/videojs/v10/issues/2572)) ([6dfdce5](https://github.com/videojs/v10/commit/6dfdce50a8717573268841dbc6ed8c2b02b9108d))
+
+
+### Bug Fixes
+
+* **skin:** misc styles fixes ([#2558](https://github.com/videojs/v10/issues/2558)) ([cd963b7](https://github.com/videojs/v10/commit/cd963b7f2cc7f4dddf225aa08afa04908ec353e7))
+
+## [10.0.0-rc.1](https://github.com/videojs/v10/compare/@videojs/utils@10.0.0-beta.32...@videojs/utils@10.0.0-rc.1) (2026-09-08)
+
+
+### Features
+
+* **skin:** generate framework skins from registry ([#2545](https://github.com/videojs/v10/issues/2545)) ([60c7b0b](https://github.com/videojs/v10/commit/60c7b0ba5441b4463e4d04f6a71660ae24eeb345))
+
 ## [10.0.0-beta.32](https://github.com/videojs/v10/compare/@videojs/utils@10.0.0-beta.31...@videojs/utils@10.0.0-beta.32) (2026-08-26)
 
 

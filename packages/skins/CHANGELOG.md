@@ -1,5 +1,132 @@
 # Changelog
 
+## [10.0.0-rc.4](https://github.com/videojs/v10/compare/@videojs/skins@10.0.0-rc.3...@videojs/skins@10.0.0-rc.4) (2026-09-26)
+
+
+### Miscellaneous Chores
+
+* **@videojs/skins:** Synchronize videojs versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @videojs/core bumped to 10.0.0-rc.4
+    * @videojs/icons bumped to 10.0.0-rc.4
+    * @videojs/installation bumped to 10.0.0-rc.4
+    * @videojs/utils bumped to 10.0.0-rc.4
+
+## [10.0.0-rc.3](https://github.com/videojs/v10/compare/@videojs/skins@10.0.0-rc.2...@videojs/skins@10.0.0-rc.3) (2026-09-25)
+
+
+### Features
+
+* about-this-player page and a help link in every player ([#2758](https://github.com/videojs/v10/issues/2758)) ([8a538a5](https://github.com/videojs/v10/commit/8a538a572945c2bb01cb79d38f420ec143a4239c))
+* **installation:** add versioned agent instructions ([#2948](https://github.com/videojs/v10/issues/2948)) ([a602f22](https://github.com/videojs/v10/commit/a602f220aedf9c2800983daade6ca298ada007ab))
+* **skin:** add title display ([#2748](https://github.com/videojs/v10/issues/2748)) ([bc007bd](https://github.com/videojs/v10/commit/bc007bd9c01083507f493883b6eb047992937f79))
+* **skins:** add theme-scoped shadcn registries ([#2736](https://github.com/videojs/v10/issues/2736)) ([d4aecc4](https://github.com/videojs/v10/commit/d4aecc479461c3d3d02c5cb32155e7a2968d80eb))
+* **skin:** slot the slider thumbnail image ([#2700](https://github.com/videojs/v10/issues/2700)) ([b68563f](https://github.com/videojs/v10/commit/b68563f62595e19c8bfc0d3c88147ea74c4473ef))
+
+
+### Bug Fixes
+
+* **core:** position and hide popups without the Popover API ([#2963](https://github.com/videojs/v10/issues/2963)) ([b0e24df](https://github.com/videojs/v10/commit/b0e24dfcbb2738dfdf0b6250880b42e5f9dd0aeb))
+* **html:** register skin properties in the host document ([#2750](https://github.com/videojs/v10/issues/2750)) ([255e68c](https://github.com/videojs/v10/commit/255e68c8b0d5c6a53b58c38dbfeff43b4710a2e6))
+* **packages:** align title display files ([#2949](https://github.com/videojs/v10/issues/2949)) ([6e01e66](https://github.com/videojs/v10/commit/6e01e66d51f66fd02316380222ef893dbec8b3e8))
+* **packages:** prevent menu highlight flicker ([#2969](https://github.com/videojs/v10/issues/2969)) ([461dbcf](https://github.com/videojs/v10/commit/461dbcfdde0c13481f6604cfe5632f9af6232416))
+* **skin:** animate slider progress continuously across chapters ([#2721](https://github.com/videojs/v10/issues/2721)) ([fdfb7d6](https://github.com/videojs/v10/commit/fdfb7d6a4d1310e627dad4307b97fca9868506e1))
+* **skin:** resolve blurry slider rendering ([#2705](https://github.com/videojs/v10/issues/2705)) ([2c01ec8](https://github.com/videojs/v10/commit/2c01ec87558dc77b927fb50b1836447275b3a49a))
+* **skin:** restore intrinsic height ([#2707](https://github.com/videojs/v10/issues/2707)) ([7d99a30](https://github.com/videojs/v10/commit/7d99a302847c9f60818af98b247dc39fc7332849))
+* **skin:** restore minimal audio borders ([#2816](https://github.com/videojs/v10/issues/2816)) ([2797ff1](https://github.com/videojs/v10/commit/2797ff1fcd704aac5007444bdd5c771b0fa6fdfb))
+* **skin:** restore settings rotation and rtl parity ([#2723](https://github.com/videojs/v10/issues/2723)) ([d31ed0f](https://github.com/videojs/v10/commit/d31ed0fec28e34df48e9865fcacc59c775b6ef6c))
+* **skin:** separate preset token layer ([#2840](https://github.com/videojs/v10/issues/2840)) ([694dae5](https://github.com/videojs/v10/commit/694dae5da9eb51f55fac6143a609cb0f826448d5))
+* **skin:** simplify the slider styles ([#2719](https://github.com/videojs/v10/issues/2719)) ([68bcf5b](https://github.com/videojs/v10/commit/68bcf5b0ae700791bbdee4c3ec01af813225bc23))
+* **skin:** stack status indicators above the title ([#2875](https://github.com/videojs/v10/issues/2875)) ([79dbd2f](https://github.com/videojs/v10/commit/79dbd2fcb9a09c3cee9c666878e2d878c38018b7))
+* **skin:** use shared browser targets for css builds ([#2730](https://github.com/videojs/v10/issues/2730)) ([ac228f3](https://github.com/videojs/v10/commit/ac228f3973553cb9c63f11970944ad69a88b49ad))
+* **vjsc:** merge classes using custom theme tokens ([#2738](https://github.com/videojs/v10/issues/2738)) ([75d4c4b](https://github.com/videojs/v10/commit/75d4c4ba70653c8eb1bdb490853cd775987e8a63))
+* **vjsc:** pin one tailwind and lightningcss for the workspace ([#2971](https://github.com/videojs/v10/issues/2971)) ([6ae504e](https://github.com/videojs/v10/commit/6ae504e5d692b70e6df86ed06601d3d92f422d16))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @videojs/core bumped to 10.0.0-rc.3
+    * @videojs/icons bumped to 10.0.0-rc.3
+    * @videojs/installation bumped to 10.0.0-rc.3
+    * @videojs/utils bumped to 10.0.0-rc.3
+
+## [10.0.0-rc.2](https://github.com/videojs/v10/compare/@videojs/skins@10.0.0-rc.1...@videojs/skins@10.0.0-rc.2) (2026-09-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* **html:** make thumbnail images composable ([#2572](https://github.com/videojs/v10/issues/2572))
+* **react:** make slider thumbnail composable ([#2568](https://github.com/videojs/v10/issues/2568))
+* **react:** make thumbnail composable ([#2566](https://github.com/videojs/v10/issues/2566))
+* **react:** make poster composable ([#2563](https://github.com/videojs/v10/issues/2563))
+
+### Features
+
+* **html:** make thumbnail images composable ([#2572](https://github.com/videojs/v10/issues/2572)) ([6dfdce5](https://github.com/videojs/v10/commit/6dfdce50a8717573268841dbc6ed8c2b02b9108d))
+* **packages:** handle controls before media metadata ([#2525](https://github.com/videojs/v10/issues/2525)) ([feed475](https://github.com/videojs/v10/commit/feed475b42186340162b92e3366f132729b6b0f9))
+* **react:** make poster composable ([#2563](https://github.com/videojs/v10/issues/2563)) ([def9bf2](https://github.com/videojs/v10/commit/def9bf21d39cce091bf31c1b36651fceb8c25687))
+* **react:** make slider thumbnail composable ([#2568](https://github.com/videojs/v10/issues/2568)) ([03fdbc6](https://github.com/videojs/v10/commit/03fdbc628350b3eab41be209f3ea99a2415f4ab8))
+* **react:** make thumbnail composable ([#2566](https://github.com/videojs/v10/issues/2566)) ([55b36ab](https://github.com/videojs/v10/commit/55b36ab31a07ae54ca084bd470a61cfc760a8e13))
+
+
+### Bug Fixes
+
+* **packages:** stabilize slider keyboard input ([#2553](https://github.com/videojs/v10/issues/2553)) ([bd9d946](https://github.com/videojs/v10/commit/bd9d9466df1a9c0cf2fb1fbbf5ed0dfe6302d2c6))
+* **skin:** misc styles fixes ([#2558](https://github.com/videojs/v10/issues/2558)) ([cd963b7](https://github.com/videojs/v10/commit/cd963b7f2cc7f4dddf225aa08afa04908ec353e7))
+* **skin:** style poster and slider thumbnail shadow hosts in webkit ([#2693](https://github.com/videojs/v10/issues/2693)) ([0a40865](https://github.com/videojs/v10/commit/0a40865edb1de28a933487cfb0dfffede23ba076))
+* **skin:** use finite radius to fix Safari clip-path bug ([#2679](https://github.com/videojs/v10/issues/2679)) ([4074a4a](https://github.com/videojs/v10/commit/4074a4a1989f0b83abeed549a4efb7bb0c2530fe))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @videojs/core bumped to 10.0.0-rc.2
+    * @videojs/icons bumped to 10.0.0-rc.2
+    * @videojs/utils bumped to 10.0.0-rc.2
+
+## [10.0.0-rc.1](https://github.com/videojs/v10/compare/@videojs/skins@10.0.0-beta.32...@videojs/skins@10.0.0-rc.1) (2026-09-08)
+
+
+### Features
+
+* **html:** generate VJSC skin templates ([#2546](https://github.com/videojs/v10/issues/2546)) ([70a1230](https://github.com/videojs/v10/commit/70a1230d44cbf0980253c1272a8106d6e47c0f48))
+* **packages:** share menu option state across targets ([#2528](https://github.com/videojs/v10/issues/2528)) ([4392cd6](https://github.com/videojs/v10/commit/4392cd6f7fa92dd3bb329b5a92206f5bf27a75b2))
+* **sandbox:** fold the skins playground into the sandbox ([#2586](https://github.com/videojs/v10/issues/2586)) ([ee38b1d](https://github.com/videojs/v10/commit/ee38b1d81ee64af72a6d9859094444fe635cc332))
+* **skin:** add VJSC video skins ([#2479](https://github.com/videojs/v10/issues/2479)) ([f3640c7](https://github.com/videojs/v10/commit/f3640c7ae912fd20e2da40109228871d48c2bfc8))
+* **skin:** define Shadcn registry catalog ([#2544](https://github.com/videojs/v10/issues/2544)) ([41096c9](https://github.com/videojs/v10/commit/41096c97381975417ba504af47411231e46e807e))
+* **skin:** generate framework skins from registry ([#2545](https://github.com/videojs/v10/issues/2545)) ([60c7b0b](https://github.com/videojs/v10/commit/60c7b0ba5441b4463e4d04f6a71660ae24eeb345))
+* **vjsc:** add named render targets ([#2527](https://github.com/videojs/v10/issues/2527)) ([5b606d2](https://github.com/videojs/v10/commit/5b606d2026bb9528167f64b4b731145ceb1224f2))
+
+
+### Bug Fixes
+
+* **packages:** adopt cn for class name merging ([#2641](https://github.com/videojs/v10/issues/2641)) ([7d04745](https://github.com/videojs/v10/commit/7d04745918ac58288582d646f1fcb476dc771087))
+* **packages:** align dialog styles across skins ([#2481](https://github.com/videojs/v10/issues/2481)) ([9601006](https://github.com/videojs/v10/commit/9601006ede03d295f1c2811db6eee0f768e30bd3))
+* **packages:** contain error dialogs in player layouts ([#2451](https://github.com/videojs/v10/issues/2451)) ([f18c59a](https://github.com/videojs/v10/commit/f18c59a159d96b2dc1b2407d3f8a0589f076cbc9))
+* **packages:** hide source-less poster images ([#2453](https://github.com/videojs/v10/issues/2453)) ([6c84721](https://github.com/videojs/v10/commit/6c8472118ab36f97381279802e1a906f828cceed))
+* **skin:** harden non-video VJSC parity ([#2530](https://github.com/videojs/v10/issues/2530)) ([ed9c452](https://github.com/videojs/v10/commit/ed9c4522c9bc9025588e6fcc336a18ea1c25fdee))
+* **skins:** harden shadcn registry delivery ([#2576](https://github.com/videojs/v10/issues/2576)) ([331cf7b](https://github.com/videojs/v10/commit/331cf7b5a602acd81f392bcb03d1a26c50ad1898))
+* **skins:** improve generated skin parity ([#2580](https://github.com/videojs/v10/issues/2580)) ([c8b7006](https://github.com/videojs/v10/commit/c8b7006a55f71b2a0d257413cac2091792278560))
+* **test:** repair the e2e suites ([#2640](https://github.com/videojs/v10/issues/2640)) ([0a55663](https://github.com/videojs/v10/commit/0a55663fa0a567c8025ddcdefeae1dddd63ea027))
+* **vjsc:** clear stale generated styles during vite hmr ([#2433](https://github.com/videojs/v10/issues/2433)) ([9404be8](https://github.com/videojs/v10/commit/9404be801bcca2b0c6ac6ca832cb2752cf3edd99))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @videojs/core bumped to 10.0.0-rc.1
+    * @videojs/icons bumped to 10.0.0-rc.1
+    * @videojs/utils bumped to 10.0.0-rc.1
+
 ## [10.0.0-beta.32](https://github.com/videojs/v10/compare/@videojs/skins@10.0.0-beta.31...@videojs/skins@10.0.0-beta.32) (2026-08-26)
 
 

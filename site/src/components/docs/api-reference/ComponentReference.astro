@@ -77,18 +77,12 @@ const singleEventsSection = !apiReferenceModel.hasParts
 
         return (
           <FrameworkCase frameworks={part.frameworks}>
-            <H3 id={part.id}>
-              <FrameworkCase frameworks={["react"]}>
-                {part.labelByFramework.react}
-              </FrameworkCase>
-              <FrameworkCase frameworks={["html"]}>
-                {part.labelByFramework.html}
-              </FrameworkCase>
-            </H3>
+            {/* A wrapper element inside the heading would split its text out of the Markdown export. */}
+            <H3 id={part.id}>{part.labelByFramework[framework]}</H3>
 
-            {part.description && (
+            {part.descriptionByFramework[framework] && (
               <P>
-                <InlineMarkdown content={part.description} />
+                <InlineMarkdown content={part.descriptionByFramework[framework]} />
               </P>
             )}
 
@@ -111,10 +105,7 @@ const singleEventsSection = !apiReferenceModel.hasParts
                 <H4 id={partStateSection.id}>{partStateSection.title}</H4>
                 <P>
                   <FrameworkCase frameworks={["react"]}>
-                    State is accessible via the{" "}
-                    <MarkdownCode>render</MarkdownCode>,{" "}
-                    <MarkdownCode>className</MarkdownCode>, and{" "}
-                    <MarkdownCode>style</MarkdownCode> props.
+                    State is accessible via the <MarkdownCode>render</MarkdownCode>, <MarkdownCode>className</MarkdownCode>, and <MarkdownCode>style</MarkdownCode> props.
                   </FrameworkCase>
                   <FrameworkCase frameworks={["html"]}>
                     State is reflected as data attributes for CSS styling.
@@ -181,9 +172,7 @@ const singleEventsSection = !apiReferenceModel.hasParts
             <H3 id={singleStateSection.id}>{singleStateSection.title}</H3>
             <P>
               <FrameworkCase frameworks={["react"]}>
-                State is accessible via the <MarkdownCode>render</MarkdownCode>,{" "}
-                <MarkdownCode>className</MarkdownCode>, and{" "}
-                <MarkdownCode>style</MarkdownCode> props.
+                State is accessible via the <MarkdownCode>render</MarkdownCode>, <MarkdownCode>className</MarkdownCode>, and <MarkdownCode>style</MarkdownCode> props.
               </FrameworkCase>
               <FrameworkCase frameworks={["html"]}>
                 State is reflected as data attributes for CSS styling.

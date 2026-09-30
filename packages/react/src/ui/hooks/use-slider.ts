@@ -1,3 +1,5 @@
+'use client';
+
 import type { SliderInput, SliderState } from '@videojs/core';
 import {
   createSlider,
@@ -25,6 +27,8 @@ export interface UseSliderOptions<State extends SliderState = SliderState> exten
   | 'changeThrottle'
   | 'onValueChange'
   | 'onValueCommit'
+  | 'onPressStart'
+  | 'onPressEnd'
   | 'onDragStart'
   | 'onDragEnd'
 > {
@@ -88,14 +92,16 @@ export function useSlider<State extends SliderState = SliderState>(
       adjustPercent: optionsRef.current.adjustPercent,
       onValueChange: (percent) => optionsRef.current.onValueChange?.(percent),
       onValueCommit: (percent) => optionsRef.current.onValueCommit?.(percent),
-      onDragStart: () => {
+      onPressStart: () => {
         releaseControlsLockRef.current ??= requestControlsLock?.() ?? null;
-        optionsRef.current.onDragStart?.();
+        optionsRef.current.onPressStart?.();
       },
-      onDragEnd: () => {
+      onPressEnd: () => {
         releaseControlsLock();
-        optionsRef.current.onDragEnd?.();
+        optionsRef.current.onPressEnd?.();
       },
+      onDragStart: () => optionsRef.current.onDragStart?.(),
+      onDragEnd: () => optionsRef.current.onDragEnd?.(),
     };
 
     return createSlider(stableOptions);
@@ -129,6 +135,11 @@ export function useSlider<State extends SliderState = SliderState>(
   const syncStyles = useCallback(
     (element = rootElementRef.current) => {
       if (!element) return;
+
+      const { dragging, pointing } = slider.input.current;
+      // Keyboard values come from the controlled state. Applying them here would
+      // briefly write the previous value before the caller handles the key.
+      if (!dragging && !pointing) return;
 
       const next = optionsRef.current.computeState(slider.input.current);
 

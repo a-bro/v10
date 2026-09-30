@@ -158,7 +158,7 @@ function toPublishState(status: PublishSessionStatus | undefined): MoqPublishMed
  * Mixin that adds MoQ publish-engine behavior to any base class.
  *
  * @example
- *   class MoqPublishMedia extends MoqPublishMediaMixin(HTMLVideoElementHost) {}
+ *   class MoqPublishMedia extends MoqPublishMediaMixin(HTMLVideoAdapter) {}
  *
  *   const media = new MoqPublishMedia();
  *   media.attach(document.querySelector('video')!);
@@ -168,7 +168,7 @@ function toPublishState(status: PublishSessionStatus | undefined): MoqPublishMed
  */
 export function MoqPublishMediaMixin<Base extends Constructor<any>>(
   BaseClass: Base
-): MixinReturn<Base, MoqPublishMediaAPI> {
+): MixinReturn<Base, MoqPublishMediaAPI, [options?: MoqPublishMediaOptions]> {
   class MoqPublishMediaImpl extends BaseClass {
     readonly #engine: Composition<MoqPublishEngineState, MoqPublishEngineContext>;
     #signals!: MoqPublishEngineSignals;
@@ -612,7 +612,7 @@ export function MoqPublishMediaMixin<Base extends Constructor<any>>(
     }
   }
 
-  return MoqPublishMediaImpl as unknown as MixinReturn<Base, MoqPublishMediaAPI>;
+  return MoqPublishMediaImpl as unknown as MixinReturn<Base, MoqPublishMediaAPI, [options?: MoqPublishMediaOptions]>;
 }
 
 /** Standalone publish media adapter with no base class. */

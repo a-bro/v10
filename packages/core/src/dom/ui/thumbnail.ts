@@ -17,22 +17,26 @@ export interface ThumbnailApi {
   readConstraints(): ThumbnailConstraints;
   updateSrc(url: string | undefined): void;
   connect(): void;
+  disconnectImg(img: HTMLImageElement): void;
   destroy(): void;
 }
 
 export function createThumbnail(options: CreateThumbnailOptions): ThumbnailApi {
   const { getContainer, getImg, onStateChange } = options;
   const core = new ThumbnailCore();
-  const abort = new AbortController();
-  const signal = abort.signal;
 
   let loading = false;
   let error = false;
   let naturalWidth = 0;
   let naturalHeight = 0;
   let lastSrc = '';
-  let imgBound = false;
+  let boundImg: HTMLImageElement | null = null;
+  let checkedImg: HTMLImageElement | null = null;
+  let stopListeningToImg: AbortController | null = null;
   let stopObservingResize: (() => void) | null = null;
+
+  // Sprite sheets that have already failed, so re-entering one does not restart the loading state.
+  const failedSrcs = new Set<string>();
 
   // --- img event listeners ---
 
@@ -44,32 +48,45 @@ export function createThumbnail(options: CreateThumbnailOptions): ThumbnailApi {
       naturalHeight = img.naturalHeight;
     }
 
+    // A sheet that succeeds on a later attempt stops counting as failed.
+    failedSrcs.delete(lastSrc);
+
     loading = false;
     error = false;
     onStateChange();
   }
 
-  function onImgError() {
+  function markFailed(): void {
+    failedSrcs.add(lastSrc);
     loading = false;
     error = true;
+  }
+
+  function onImgError() {
+    markFailed();
     onStateChange();
   }
 
   function bindImg(img: HTMLImageElement): void {
-    listen(img, 'load', onImgLoad, { signal });
-    listen(img, 'error', onImgError, { signal });
+    stopListeningToImg = new AbortController();
+
+    listen(img, 'load', onImgLoad, { signal: stopListeningToImg.signal });
+    listen(img, 'error', onImgError, { signal: stopListeningToImg.signal });
   }
 
   // --- Lazy binding ---
 
   function ensureBindings(): void {
-    if (!imgBound) {
-      const img = getImg();
+    const img = getImg();
+    const imageChanged = img !== boundImg;
 
-      if (img) {
-        bindImg(img);
-        imgBound = true;
-      }
+    if (imageChanged) {
+      stopListeningToImg?.abort();
+      stopListeningToImg = null;
+      boundImg = img;
+      checkedImg = null;
+
+      if (img) bindImg(img);
     }
 
     if (!stopObservingResize) {
@@ -92,8 +109,13 @@ export function createThumbnail(options: CreateThumbnailOptions): ThumbnailApi {
     lastSrc = src;
 
     if (src) {
-      loading = true;
-      error = false;
+      // Returning to a sheet already known to fail goes straight back to the error state. Restarting the loading
+      // state would flash the skin's spinner shell under the pointer every time scrubbing crosses that boundary. The
+      // renderer assigns the src either way, so a sheet that recovers still clears itself on load.
+      const failed = failedSrcs.has(src);
+
+      loading = !failed;
+      error = failed;
     } else {
       loading = false;
       error = false;
@@ -110,24 +132,48 @@ export function createThumbnail(options: CreateThumbnailOptions): ThumbnailApi {
     // Handle the case where the img already loaded or errored before listeners
     // were bound (e.g., cached image in React where mount happens before useEffect).
     const img = getImg();
+    if (!img || img === checkedImg) return;
 
-    if (img?.complete && lastSrc) {
-      if (img.naturalWidth > 0) {
-        naturalWidth = img.naturalWidth;
-        naturalHeight = img.naturalHeight;
-        loading = false;
-        error = false;
-      } else {
-        loading = false;
-        error = true;
-      }
+    checkedImg = img;
 
-      onStateChange();
+    if (!img.complete || !lastSrc) return;
+
+    const previous = { loading, error, naturalWidth, naturalHeight };
+
+    if (img.naturalWidth > 0) {
+      naturalWidth = img.naturalWidth;
+      naturalHeight = img.naturalHeight;
+      loading = false;
+      error = false;
+    } else {
+      markFailed();
     }
+
+    // A renderer may hand the same settled image back after a ref swap. Announcing an
+    // unchanged state would schedule another render, whose ref swap lands right back here.
+    const changed =
+      previous.loading !== loading ||
+      previous.error !== error ||
+      previous.naturalWidth !== naturalWidth ||
+      previous.naturalHeight !== naturalHeight;
+
+    if (changed) onStateChange();
+  }
+
+  function disconnectImg(img: HTMLImageElement): void {
+    if (img !== boundImg) return;
+
+    stopListeningToImg?.abort();
+    stopListeningToImg = null;
+    boundImg = null;
+    checkedImg = null;
   }
 
   function destroy(): void {
-    abort.abort();
+    stopListeningToImg?.abort();
+    stopListeningToImg = null;
+    boundImg = null;
+    checkedImg = null;
     stopObservingResize?.();
     stopObservingResize = null;
   }
@@ -155,6 +201,7 @@ export function createThumbnail(options: CreateThumbnailOptions): ThumbnailApi {
 
     updateSrc,
     connect,
+    disconnectImg,
     destroy,
   };
 }

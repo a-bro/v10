@@ -22,6 +22,8 @@
  *   - *Skin → skin
  *   - Remaining → media element
  * - .tailwind in filename → excluded (both frameworks)
+ * - No HTML media element found → derived from the React media element when it wraps a native tag (Video → `video`, Audio
+ *   → `audio`), so every preset framework pair reports the same default media
  *
  * Feature resolution: packages/core/src/dom/store/features/presets.ts
  */
@@ -30,6 +32,7 @@ import * as path from 'node:path';
 
 import { parseSync } from 'oxc-parser';
 
+import { featureDocsSlug } from './feature-handler.js';
 import type { SourceFile } from './oxc-project.js';
 import { getJSDocDescription, staticName, unwrapExpression } from './oxc-project.js';
 import type { PresetFeatureRef, PresetReference, PresetSkinDef } from './types.js';
@@ -364,23 +367,6 @@ function findReactMediaElement(filePath: string): string | undefined {
 
 // ─── Feature Bundle Resolution ──────────────────────────────────────
 
-/**
- * Feature names whose kebab-cased form doesn't match the docs page slug. Example: `textTrack` →
- * `feature-text-tracks.mdx`.
- */
-const FEATURE_SLUG_OVERRIDES: Record<string, string> = {
-  textTrack: 'text-tracks',
-};
-
-function featureDocsSlug(featureName: string): string {
-  const override = FEATURE_SLUG_OVERRIDES[featureName];
-  if (override) return `reference/feature-${override}`;
-
-  const kebab = featureName.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
-
-  return `reference/feature-${kebab}`;
-}
-
 function featureReferenceExists(monorepoRoot: string, slug: string): boolean {
   const mdxPath = path.join(monorepoRoot, 'site/src/content/docs', `${slug}.mdx`);
 
@@ -512,6 +498,16 @@ function scanReactDirectory(scanDir: string, barrelPath: string, presetName: str
 
 // ─── Preset Reference Building ──────────────────────────────────────
 
+/**
+ * React media components that render a native element rather than a custom element. The HTML directory scan can't see
+ * these — there is no class with a `static tagName` for a plain `<video>` — so the native tag is derived from the React
+ * barrel's media re-export instead.
+ */
+const NATIVE_MEDIA_TAGS: Record<string, string> = {
+  Audio: 'audio',
+  Video: 'video',
+};
+
 function buildPresetReference(
   preset: PresetInfo,
   featureBundleMap: Map<string, string[]>,
@@ -548,7 +544,9 @@ function buildPresetReference(
     react: { skins: reactSkins, mediaElement: reactMediaElement ?? '' },
   };
 
-  if (htmlResult.mediaElement) ref.html.mediaElement = htmlResult.mediaElement;
+  const htmlMediaElement = htmlResult.mediaElement ?? (reactMediaElement && NATIVE_MEDIA_TAGS[reactMediaElement]);
+
+  if (preset.html && htmlMediaElement) ref.html.mediaElement = htmlMediaElement;
 
   if (description) ref.description = description;
 

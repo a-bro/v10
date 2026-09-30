@@ -119,7 +119,9 @@ export interface MoqMediaAPI extends MoqMediaProps {
  *   media.src = 'moqt://relay.example.com/live#msf:live--catalog';
  *   await media.play();
  */
-export function MoqMediaMixin<Base extends Constructor<object>>(BaseClass: Base): MixinReturn<Base, MoqMediaAPI> {
+export function MoqMediaMixin<Base extends Constructor<object>>(
+  BaseClass: Base
+): MixinReturn<Base, MoqMediaAPI, [options?: MoqMediaOptions]> {
   class MoqMediaImpl extends BaseClass implements MoqMediaAPI {
     readonly #engine: Composition<MoqEngineState, MoqEngineContext>;
     #signals!: MoqEngineSignals;
@@ -461,7 +463,7 @@ export function MoqMediaMixin<Base extends Constructor<object>>(BaseClass: Base)
     }
   }
 
-  return MoqMediaImpl as unknown as MixinReturn<Base, MoqMediaAPI>;
+  return MoqMediaImpl as unknown as MixinReturn<Base, MoqMediaAPI, [options?: MoqMediaOptions]>;
 }
 
 /** Standalone canvas-facade media object (no host base class). */

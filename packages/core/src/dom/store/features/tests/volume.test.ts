@@ -35,10 +35,17 @@ describe('volumeFeature', () => {
     it('reports mute available on media that has no volume level', () => {
       // An embed that takes a mute command but offers no way to set a level.
       // Reading one availability for both would hide a mute button that works.
-      const media = { muted: false, addEventListener() {}, removeEventListener() {} };
+      const media = {
+        muted: false,
+        addEventListener() {},
+        removeEventListener() {},
+      };
       const store = createStore<PlayerTarget>()(volumeFeature);
 
-      store.attach({ media: media as unknown as HTMLVideoElement, container: null });
+      store.attach({
+        media: media as unknown as HTMLVideoElement,
+        container: null,
+      });
 
       expect(store.state.mutedAvailability).toBe('available');
       expect(store.state.volumeAvailability).toBe('unavailable');
@@ -49,7 +56,10 @@ describe('volumeFeature', () => {
       const media = { addEventListener() {}, removeEventListener() {} };
       const store = createStore<PlayerTarget>()(volumeFeature);
 
-      store.attach({ media: media as unknown as HTMLVideoElement, container: null });
+      store.attach({
+        media: media as unknown as HTMLVideoElement,
+        container: null,
+      });
 
       expect(store.state.mutedAvailability).toBe('unavailable');
       expect(store.state.volumeAvailability).toBe('unavailable');
@@ -85,6 +95,7 @@ describe('volumeFeature', () => {
         const result = await store.setVolume(0.7);
 
         expect(video.volume).toBe(0.7);
+        expect(store.state.volume).toBe(0.7);
         expect(result).toBe(0.7);
       });
 
@@ -120,6 +131,7 @@ describe('volumeFeature', () => {
 
         expect(video.volume).toBe(0.7);
         expect(video.muted).toBe(false);
+        expect(store.state.muted).toBe(false);
       });
 
       it('does not unmute when setting volume to 0', async () => {
@@ -147,14 +159,30 @@ describe('volumeFeature', () => {
       });
     });
 
-    describe('toggleMuted', () => {
+    describe('setMuted', () => {
+      it('publishes the new muted value without waiting for volumechange', () => {
+        const video = createMockVideo({ muted: false, volume: 0 });
+        const store = createStore<PlayerTarget>()(volumeFeature);
+
+        // Registered first, so the store's own `volumechange` listener never runs.
+        video.addEventListener('volumechange', (event) => event.stopImmediatePropagation());
+        store.attach({ media: video, container: null });
+
+        store.setMuted(true);
+        expect(store.state.muted).toBe(true);
+
+        store.setMuted(false);
+        expect(store.state.muted).toBe(false);
+        expect(store.state.volume).toBe(video.volume);
+      });
+
       it('mutes when unmuted with volume > 0', async () => {
         const video = createMockVideo({ muted: false, volume: 0.8 });
         const store = createStore<PlayerTarget>()(volumeFeature);
 
         store.attach({ media: video, container: null });
 
-        const result = await store.toggleMuted();
+        const result = await store.setMuted(true);
 
         expect(video.muted).toBe(true);
         expect(video.volume).toBe(0.8);
@@ -167,7 +195,7 @@ describe('volumeFeature', () => {
 
         store.attach({ media: video, container: null });
 
-        const result = await store.toggleMuted();
+        const result = await store.setMuted(false);
 
         expect(video.muted).toBe(false);
         expect(video.volume).toBe(0.6);
@@ -180,7 +208,7 @@ describe('volumeFeature', () => {
 
         store.attach({ media: video, container: null });
 
-        await store.toggleMuted();
+        await store.setMuted(false);
 
         expect(video.muted).toBe(false);
         expect(video.volume).toBe(0.25);
@@ -192,7 +220,7 @@ describe('volumeFeature', () => {
 
         store.attach({ media: video, container: null });
 
-        const result = await store.toggleMuted();
+        const result = await store.setMuted(false);
 
         expect(video.muted).toBe(false);
         expect(video.volume).toBe(0.25);

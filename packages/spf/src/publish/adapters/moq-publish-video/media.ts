@@ -1,8 +1,8 @@
-import { HTMLVideoElementHost } from '@videojs/media/dom/video-host';
+import { HTMLVideoAdapter } from '@videojs/media/dom';
 
 import { MoqPublishMediaMixin } from '../../engines/moq/adapter';
 
-const MoqPublishMediaBase = MoqPublishMediaMixin(HTMLVideoElementHost);
+const MoqPublishMediaBase = MoqPublishMediaMixin(HTMLVideoAdapter);
 
 /**
  * Publisher media host backed by the SPF MoQ publish engine. The attached `<video>` element is the local capture

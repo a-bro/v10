@@ -28,20 +28,30 @@ export function TableOfContentsMobile({ headings, activeId, onNavigate, classNam
 
   useEffect(() => {
     const updateViewportLayout = () => {
-      const navHeightValue = triggerRef.current ? getComputedStyle(triggerRef.current).getPropertyValue('--nav-h') : '';
-      const navHeight = Number.parseFloat(navHeightValue) || 52;
+      const computedStyle = triggerRef.current ? getComputedStyle(triggerRef.current) : null;
+      const bannerHeight = Number.parseFloat(computedStyle?.getPropertyValue('--banner-height') ?? '') || 0;
+      const navHeight = Number.parseFloat(computedStyle?.getPropertyValue('--nav-h') ?? '') || 52;
+      const stickyHeaderHeight = bannerHeight + navHeight;
+      const contentHeight = Math.max(0, window.innerHeight - stickyHeaderHeight);
 
       setViewportLayout({
-        availableHeight: Math.max(0, window.innerHeight - navHeight - 32),
-        railTop: navHeight + (window.innerHeight - navHeight) / 2,
+        availableHeight: Math.max(0, contentHeight - 32),
+        railTop: stickyHeaderHeight + contentHeight / 2,
       });
     };
+    const bannerContainer = document.querySelector('[data-banner-container]');
+    const bannerObserver =
+      bannerContainer && 'ResizeObserver' in window ? new ResizeObserver(updateViewportLayout) : null;
 
     updateViewportLayout();
+
+    if (bannerObserver && bannerContainer) bannerObserver.observe(bannerContainer);
+
     window.addEventListener('resize', updateViewportLayout);
     window.visualViewport?.addEventListener('resize', updateViewportLayout);
 
     return () => {
+      bannerObserver?.disconnect();
       window.removeEventListener('resize', updateViewportLayout);
       window.visualViewport?.removeEventListener('resize', updateViewportLayout);
     };
@@ -130,11 +140,11 @@ export function TableOfContentsMobile({ headings, activeId, onNavigate, classNam
               popupRef.current
             }
             className={clsx(
-              'origin-left overflow-y-auto rounded-xs border border-manila-dark bg-manila-light pl-6 text-p3 shadow-xl transition duration-150 ease-out',
+              'origin-left overflow-y-auto rounded-lg corner-squircle border border-manila-dark bg-manila-light pl-6 text-p3 shadow-xl transition duration-150 ease-out',
               'starting-style:-translate-x-1 starting-style:scale-98 starting-style:opacity-0',
               'ending-style:-translate-x-1 ending-style:scale-98 ending-style:opacity-0 ending-style:duration-100 ending-style:ease-in',
               'motion-reduce:transition-none motion-reduce:starting-style:translate-x-0 motion-reduce:starting-style:scale-100 motion-reduce:ending-style:translate-x-0 motion-reduce:ending-style:scale-100',
-              'dark:border-soot dark:bg-soot'
+              'dark:bg-soot'
             )}
             style={{
               width: 'min(20rem, calc(100vw - 3rem))',

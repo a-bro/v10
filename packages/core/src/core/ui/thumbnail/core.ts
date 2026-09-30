@@ -1,4 +1,5 @@
 import { findLastAtOrBefore } from '@videojs/utils/array';
+import { isNull, isUndefined } from '@videojs/utils/predicate';
 
 import type {
   ThumbnailConstraints,
@@ -12,6 +13,11 @@ import type {
 export interface ThumbnailProps {
   /** Time in seconds to display the thumbnail for. */
   time?: number | undefined;
+  /** Pre-parsed thumbnail images — bypasses the automatic `<track>` detection. */
+  thumbnails?: ThumbnailImage[] | undefined;
+}
+
+export interface ThumbnailImageProps {
   /**
    * CORS setting forwarded to the inner `<img>`.
    *
@@ -69,12 +75,13 @@ export class ThumbnailCore {
   }
 
   /**
-   * Calculate a uniform scale factor that fits `tileWidth × tileHeight` within the given CSS min/max constraints while
+   * Calculate a uniform scale factor that sizes `tileWidth × tileHeight` to the given CSS min/max constraints while
    * preserving aspect ratio.
    *
-   * - Scales down when the tile exceeds max constraints.
-   * - Scales up when the tile is smaller than min constraints.
-   * - Returns `1` when no scaling is needed.
+   * - Fills the max constraints, scaling the tile up as readily as down. A box that grows — entering fullscreen widens it
+   *   through a container query — has to take the tile with it rather than leave it at its native size.
+   * - Raises that to meet min constraints, which win over max as they do in CSS.
+   * - Returns `1` when unconstrained.
    */
   calculateScale(tileWidth: number, tileHeight: number, constraints: ThumbnailConstraints): number {
     const { minWidth, maxWidth, minHeight, maxHeight } = constraints;
@@ -82,18 +89,13 @@ export class ThumbnailCore {
     const maxRatio = Math.min(maxWidth / tileWidth, maxHeight / tileHeight);
     const minRatio = Math.max(minWidth / tileWidth, minHeight / tileHeight);
 
-    // Scale down if exceeding max constraints.
-    if (Number.isFinite(maxRatio) && maxRatio < 1) return maxRatio;
+    const scale = Number.isFinite(maxRatio) ? maxRatio : 1;
 
-    // Scale up if below min constraints.
-    if (Number.isFinite(minRatio) && minRatio > 1) return minRatio;
-
-    return 1;
+    return Number.isFinite(minRatio) && minRatio > scale ? minRatio : scale;
   }
 
   /**
-   * Compute container and image dimensions for the current thumbnail, scaled to fit within the element's CSS min/max
-   * constraints.
+   * Compute container and image dimensions for the current thumbnail, scaled to the element's CSS min/max constraints.
    *
    * The container clips the sprite sheet via `overflow: hidden`, and the image is positioned with `transform:
    * translate()` to show the correct tile.
@@ -131,6 +133,24 @@ export class ThumbnailCore {
     };
   }
 
+  /**
+   * Resolve the CORS mode the image should request with.
+   *
+   * `null` opts out and drops the attribute. Any other explicit value wins, including `''`, which the CORS-settings
+   * attribute reads as Anonymous. Otherwise the inherited mode applies, which renderers supply only for
+   * `<track>`-sourced thumbnails since a list set directly may point at a host unrelated to the media element.
+   */
+  resolveCrossOrigin(
+    explicit: ThumbnailCrossOrigin | undefined,
+    inherited: ThumbnailCrossOrigin | undefined
+  ): Exclude<ThumbnailCrossOrigin, null> | undefined {
+    if (isNull(explicit)) return undefined;
+
+    if (!isUndefined(explicit)) return explicit;
+
+    return inherited ?? undefined;
+  }
+
   getState(loading: boolean, error: boolean, thumbnail: ThumbnailImage | undefined): ThumbnailState {
     return {
       loading,
@@ -150,6 +170,8 @@ export class ThumbnailCore {
 }
 
 export namespace ThumbnailCore {
-  export type Props = ThumbnailProps;
+  export type Props = ThumbnailProps & ThumbnailImageProps;
+  export type RootProps = ThumbnailProps;
+  export type ImageProps = ThumbnailImageProps;
   export type State = ThumbnailState;
 }

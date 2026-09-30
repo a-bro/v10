@@ -1,3 +1,5 @@
+'use client';
+
 import { cameraText, enableDevicesText, microphoneText } from '@videojs/core/i18n/text/publish';
 import { cn } from '@videojs/utils/style';
 import { type ComponentProps, forwardRef, type ReactNode } from 'react';

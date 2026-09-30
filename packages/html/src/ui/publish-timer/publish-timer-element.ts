@@ -4,7 +4,7 @@ import type { Text } from '@videojs/core/i18n';
 import type { PropertyDeclarationMap, PropertyValues } from '@videojs/element';
 
 import { playerContext } from '../../player/context';
-import { PlayerController } from '../../player/player-controller';
+import { PlayerController } from '../../player/controller';
 import { MediaUIElement } from '../media-ui-element';
 
 /**

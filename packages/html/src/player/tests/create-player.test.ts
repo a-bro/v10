@@ -7,11 +7,11 @@ import {
   videoFeatures,
 } from '@videojs/core/dom';
 import { ContextConsumer } from '@videojs/element/context';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { BackgroundVideo } from '../../media/background-video';
 import { MediaAttachMixin } from '../../store/media-attach-mixin';
-import { ContainerElement } from '../../ui/container/container-element';
+import { ContainerElement } from '../../ui/container/element';
 import { UIElement } from '../../ui/ui-element';
 import { createPlayer } from '../create-player';
 import { popupGroupContext } from '../popup-group-context';

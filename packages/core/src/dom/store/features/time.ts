@@ -1,5 +1,10 @@
-import type { MediaTimeState } from '@videojs/media';
-import { hasMetadata, isMediaBufferCapable, isMediaSeekCapable, isMediaSourceCapable } from '@videojs/media';
+import {
+  hasMetadata,
+  isMediaBufferCapable,
+  isMediaSeekCapable,
+  isMediaSourceCapable,
+  type MediaTimeState,
+} from '@videojs/media';
 import { listen, onEvent } from '@videojs/utils/dom';
 import { noop } from '@videojs/utils/function';
 
@@ -16,6 +21,9 @@ export const timeFeature = definePlayerFeature({
       const { media } = target(),
         signal = signals.supersede(signalKeys.seek);
       if (!isMediaSeekCapable(media) || !isMediaSourceCapable(media)) return 0;
+
+      // A new source abandons the seek at any stage, so `emptied` cancels it like a superseding seek.
+      listen(media, 'emptied', () => signals.supersede(signalKeys.seek), { signal, once: true });
 
       if (!hasMetadata(media)) {
         const loaded = await onEvent(media, 'loadedmetadata', { signal }).catch(() => false);

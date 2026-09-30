@@ -1,4 +1,4 @@
-import { CustomMediaElement } from '@videojs/media/dom/custom-media-element';
+import { CustomMediaElement } from '@videojs/media/dom';
 import { MoqPublishMedia } from '@videojs/spf/moq-publish-video';
 
 import { MediaAttachMixin } from '../../store/media-attach-mixin';
@@ -17,12 +17,12 @@ const MoqPublishVideoBase = MediaAttachMixin(CustomMediaElement('video', MoqPubl
  * contract, not a copy that can drift per element.
  */
 export function installCaptureAttributeReflection(
-  el: HTMLElement & { host: Pick<MoqPublishMedia, 'cameraActive' | 'screenShareActive' | 'micActive'> }
+  el: HTMLElement & { adapter: Pick<MoqPublishMedia, 'cameraActive' | 'screenShareActive' | 'micActive'> }
 ): void {
   el.addEventListener('capturesourcechange', () => {
-    el.toggleAttribute('camera-active', el.host.cameraActive);
-    el.toggleAttribute('screen-share-active', el.host.screenShareActive);
-    el.toggleAttribute('mic-active', el.host.micActive);
+    el.toggleAttribute('camera-active', el.adapter.cameraActive);
+    el.toggleAttribute('screen-share-active', el.adapter.screenShareActive);
+    el.toggleAttribute('mic-active', el.adapter.micActive);
   });
 }
 

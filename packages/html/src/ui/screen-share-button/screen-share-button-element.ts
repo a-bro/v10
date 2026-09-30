@@ -3,7 +3,7 @@ import { selectCaptureSource } from '@videojs/core/dom';
 import type { MediaCaptureSourceState } from '@videojs/media';
 
 import { playerContext } from '../../player/context';
-import { PlayerController } from '../../player/player-controller';
+import { PlayerController } from '../../player/controller';
 import { MediaButtonElement } from '../media-button-element';
 
 export class ScreenShareButtonElement extends MediaButtonElement<ScreenShareButtonCore> {

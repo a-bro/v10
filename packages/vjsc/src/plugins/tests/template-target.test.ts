@@ -5,8 +5,8 @@ import { defineSchema } from '../../components/definition';
 import { defineComponentTarget } from '../../target/definition';
 import { Host, jsx } from '../../target/jsx-runtime';
 import { readComponentSource } from '../component-meta';
-import { componentSourcePlugin } from '../component-source';
 import { templateTargetPlugin } from '../template-target';
+import { componentSourcePlugin } from './helpers/component-source';
 
 const MODULE_ID = '\0fixture.tsx?target=react';
 const schema = defineSchema('@fixture/components', {});
@@ -21,7 +21,7 @@ const target = defineComponentTarget<typeof schema>()(({ code, element }) => {
 
   return {
     source: '@fixture/components',
-    resolve: () => undefined,
+    components: { resolve: () => undefined },
     primitives: {
       Template: {
         item: {
@@ -33,6 +33,12 @@ const target = defineComponentTarget<typeof schema>()(({ code, element }) => {
             label: ({ props: source }) => jsx(Span, { ...source, children: item.label }),
             tier: ({ props: source }) => code.when(item.tier, jsx(Sup, { ...source, children: item.tier })),
           },
+        },
+        text: {
+          render: ({ children }) =>
+            jsx(Host, {
+              renderItem: code.fn([item], code.withProps(children, { children: item.label })),
+            }),
         },
         chapter: {
           render: ({ props: source, children }) =>
@@ -47,6 +53,15 @@ const target = defineComponentTarget<typeof schema>()(({ code, element }) => {
 });
 
 describe('templateTargetPlugin', () => {
+  it('passes explicit children through host props', async () => {
+    const source = await transform(`
+      import { Template } from 'vjsc/components';
+      export const list = <List><Template name="text"><div className="title" /></Template></List>;
+    `);
+
+    expect(source).toContain('children={item.label}');
+  });
+
   it('lowers host callbacks and template parts from source-backed JSX', async () => {
     const source = await transform(`
       import { Template } from 'vjsc/components';

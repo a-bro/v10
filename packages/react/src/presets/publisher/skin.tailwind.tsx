@@ -1,24 +1,6 @@
+'use client';
+
 import { cameraText, enableDevicesText, microphoneText } from '@videojs/core/i18n/text/publish';
-import {
-  button,
-  buttonGroup,
-  capturePlaceholder,
-  connectionIndicator,
-  controls,
-  deviceControl,
-  deviceGroup,
-  dialog,
-  icon,
-  iconState,
-  menu,
-  controlsBackdrop,
-  popup,
-  publishBadge,
-  publishStatus,
-  publishTimer,
-  root,
-  spacer,
-} from '@videojs/skins/default/tailwind/publisher.tailwind';
 import { cn } from '@videojs/utils/style';
 import { type ComponentProps, forwardRef, type ReactNode } from 'react';
 
@@ -54,6 +36,26 @@ import { PublishTimer } from '@/ui/publish-timer';
 import { ScreenShareButton } from '@/ui/screen-share-button';
 import { Tooltip } from '@/ui/tooltip';
 
+import {
+  button,
+  buttonGroup,
+  capturePlaceholder,
+  connectionIndicator,
+  controls,
+  deviceControl,
+  deviceGroup,
+  dialog,
+  icon,
+  iconState,
+  menu,
+  controlsBackdrop,
+  popup,
+  publishBadge,
+  publishStatus,
+  publishTimer,
+  root,
+  spacer,
+} from './legacy-skin/default/tailwind/publisher.tailwind';
 import type { PublisherSkinProps } from './skin';
 
 const Button = forwardRef<HTMLButtonElement, ComponentProps<'button'>>(function Button({ className, ...props }, ref) {

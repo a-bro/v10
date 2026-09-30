@@ -27,7 +27,7 @@ import '@videojs/html/media/moq-publish-video';
 import { installCaptureAttributeReflection, MediaAttachMixin } from '@videojs/html';
 import { SimpleMoqVideoElement } from '@videojs/html/media/simple-moq-video';
 import type { MediaPublishStats } from '@videojs/media';
-import { CustomMediaElement } from '@videojs/media/dom/custom-media-element';
+import { CustomMediaElement } from '@videojs/media/dom';
 import type { MoqPublishMediaOptions } from '@videojs/spf/moq-publish';
 import { MoqPublishMedia } from '@videojs/spf/moq-publish-video';
 
@@ -293,8 +293,8 @@ type PublisherHostLike = Pick<
   | 'publishStats'
 >;
 
-const el = document.getElementById('media') as HTMLElement & { host: PublisherHostLike };
-const media = el.host;
+const el = document.getElementById('media') as HTMLElement & { adapter: PublisherHostLike };
+const media = el.adapter;
 const statusEl = document.getElementById('status') as HTMLPreElement;
 const player = document.getElementById('player') as SimpleMoqVideoElement | null;
 

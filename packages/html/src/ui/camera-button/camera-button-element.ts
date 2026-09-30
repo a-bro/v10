@@ -3,7 +3,7 @@ import { selectCaptureTracks } from '@videojs/core/dom';
 import type { MediaCaptureTracksState } from '@videojs/media';
 
 import { playerContext } from '../../player/context';
-import { PlayerController } from '../../player/player-controller';
+import { PlayerController } from '../../player/controller';
 import { MediaButtonElement } from '../media-button-element';
 
 export class CameraButtonElement extends MediaButtonElement<CameraButtonCore> {

@@ -6,9 +6,9 @@ import type { PropertyDeclarationMap, PropertyValues } from '@videojs/element';
 import { i18nContext } from '../../i18n/context';
 import { I18nController } from '../../i18n/controller';
 import { playerContext } from '../../player/context';
-import { PlayerController } from '../../player/player-controller';
-import { MenuRadioGroupElement } from '../menu/menu-radio-group-element';
-import { RadioOptionsController } from '../radio-options/radio-options-controller';
+import { PlayerController } from '../../player/controller';
+import { MenuRadioGroupElement } from '../menu/radio-group';
+import { RadioOptionsController } from '../radio-options/controller';
 
 export class MicRadioGroupElement extends MenuRadioGroupElement {
   static override readonly tagName = 'media-mic-radio-group';
@@ -65,7 +65,7 @@ export class MicRadioGroupElement extends MenuRadioGroupElement {
         this.#i18n.value,
         this.#i18n.locale
       );
-      this.publishMenuTriggerState(state.disabled, state.availability);
+      this.publishMenuOptionState(state.disabled, false, state.availability);
     }
 
     super.update(changed);

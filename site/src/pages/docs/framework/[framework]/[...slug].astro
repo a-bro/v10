@@ -1,22 +1,10 @@
 ---
-import type { CollectionEntry } from 'astro:content';
-import { getCollection, render } from 'astro:content';
-import clsx from 'clsx';
-import CopyMarkdownButton from '@/components/CopyMarkdownButton';
-import DocsNavigation from '@/components/docs/DocsNavigation.astro';
-import EditPageButton from '@/components/docs/EditPageButton.astro';
-import { Selectors } from '@/components/docs/Selectors';
-import { TableOfContents } from '@/components/docs/TableOfContents';
-import JsonLd from '@/components/JsonLd.astro';
-import defaultMarkdownComponents from '@/components/typography/defaultMarkdownComponents';
-import H2Markdown from '@/components/typography/H2Markdown.astro';
-import { PRODUCTION_URL } from '@/consts';
-import DocsLayout from '@/layouts/Docs.astro';
+import { getCollection } from 'astro:content';
+import DocsPage from '@/components/docs/DocsPage.astro';
 import type { SupportedFramework } from '@/types/docs';
 import { SUPPORTED_FRAMEWORKS } from '@/types/docs';
-import { filterSidebar, getAdjacentGuides, getAllGuideSlugs, getSectionsForGuide } from '@/utils/docs/sidebar';
-import { getDocTitle, isCodeIdentifier } from '@/utils/docs/title';
-import { createTechArticleSchema } from '@/utils/jsonLd/schemas';
+import { CANONICAL_INSTALLATION_SLUGS } from '@/utils/docs/routing';
+import { filterSidebar, getAllGuideSlugs } from '@/utils/docs/sidebar';
 
 export async function getStaticPaths() {
   const docsCollection = await getCollection('docs');
@@ -41,7 +29,7 @@ export async function getStaticPaths() {
 
     // Filter docs to only those visible in this framework's sidebar
     return docsCollection
-      .filter((doc) => allowedSlugs.has(doc.id))
+      .filter((doc) => allowedSlugs.has(doc.id) && !CANONICAL_INSTALLATION_SLUGS.has(doc.id))
       .map((doc) => ({
         params: {
           framework,
@@ -54,117 +42,8 @@ export async function getStaticPaths() {
   return staticPaths;
 }
 
-type Props = {
-  doc: CollectionEntry<'docs'>;
-  framework: SupportedFramework;
-};
-
 const { framework, slug } = Astro.params;
 const { doc } = Astro.props;
-const { Content, headings, remarkPluginFrontmatter } = await render(doc);
-
-// Use conditional headings from our remark plugin if available, otherwise fallback to default headings
-const conditionalHeadings = remarkPluginFrontmatter?.conditionalHeadings;
-const filteredHeadings = conditionalHeadings
-  ? conditionalHeadings.filter((h: any) => {
-      const matchesFramework = !h.frameworks || h.frameworks.includes(framework);
-
-      return matchesFramework;
-    })
-  : headings;
-
-// Get adjacent guides for navigation
-const { prev, next } = getAdjacentGuides(slug, framework);
-
-// Fetch all docs to get their framework-specific titles
-const allDocs = await getCollection('docs');
-const docTitles = new Map(allDocs.map((d) => [d.id, getDocTitle(d, framework)]));
-
-// Get the section hierarchy for this guide
-const sections = getSectionsForGuide(slug, filterSidebar(framework));
-
-// Build JSON-LD schema for TechArticle
-const pageUrl = new URL(Astro.url.pathname, PRODUCTION_URL).toString();
-const jsonLdSchema = createTechArticleSchema({
-  title: getDocTitle(doc, framework),
-  description: doc.data.description,
-  url: pageUrl,
-  updatedDate: doc.data.updatedDate,
-  readingTime: remarkPluginFrontmatter.readingTimeMinutes,
-  articleSection: sections.length > 0 ? sections.join(' > ') : undefined,
-});
 ---
 
-<DocsLayout doc={doc} framework={framework} slug={slug}>
-  <JsonLd slot="head" schema={jsonLdSchema} />
-  <main
-    class:list={[
-      "flex-1",
-      "grid grid-cols-1 xl:grid-cols-(--xl-grid-cols)",
-      "[grid-template-areas:var(--grid-template-areas)] xl:[grid-template-areas:var(--xl-grid-template-areas)]",
-      "grid-rows-(--grid-rows) xl:grid-rows-1",
-    ]}
-    style="
-      --xl-grid-cols: minmax(0, 1fr) calc(var(--spacing) * 59);
-      --grid-template-areas: 'selectors' 'toc' 'article';
-      --grid-rows: min-content min-content minmax(0, 1fr);
-      --xl-grid-template-areas: 'article toc';
-    "
-  >
-    <div class="md:hidden" style="grid-area: selectors;">
-      <Selectors client:idle currentFramework={framework} currentSlug={slug} />
-    </div>
-    <div
-      class="sticky z-20 overflow-y-auto"
-      style="grid-area: toc; top: var(--nav-h); max-height: calc(100vh - var(--nav-h));"
-    >
-      <TableOfContents client:idle headings={filteredHeadings} />
-    </div>
-    <div
-      id="main-content"
-      class="@container flex flex-col px-6 lg:px-12"
-      style="grid-area: article;"
-    >
-      <article
-        class="mb-18 flex-1"
-        data-search-content
-        data-llms-content
-        data-llms-description={doc.data.description}
-        data-framework={framework}
-        data-site="docs"
-        data-category={sections[0]}
-      >
-        <header
-          class:list={[
-            "mx-auto mb-8 max-w-3xl border-b border-manila-75 py-8 dark:border-warm-gray",
-            "flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-end",
-          ]}
-        >
-          <div>
-            <H2Markdown
-              as="h1"
-              class={clsx(
-                "mt-0 mb-4 text-h25 @lg:text-h2",
-                isCodeIdentifier(getDocTitle(doc, framework)) && "normal-case",
-              )}
-            >
-              {getDocTitle(doc, framework)}
-            </H2Markdown>
-            <p class="text-p2">{doc.data.description}</p>
-          </div>
-          <CopyMarkdownButton client:idle />
-        </header>
-        <Content components={{ ...defaultMarkdownComponents }} />
-      </article>
-      <footer class="mb-18 grid gap-5">
-        <DocsNavigation
-          prev={prev}
-          next={next}
-          framework={framework}
-          docTitles={docTitles}
-        />
-        <EditPageButton filePath={`site/src/content/docs/${doc.id}.mdx`} />
-      </footer>
-    </div>
-  </main>
-</DocsLayout>
+<DocsPage doc={doc} framework={framework as SupportedFramework} slug={slug} />

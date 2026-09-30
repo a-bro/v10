@@ -18,9 +18,6 @@ const createPackConfig = (mode: PackageBuildMode): PackUserConfig => ({
     'hls-audio': 'src/playback/adapters/hls-audio/index.ts',
     'hls-background-video': 'src/playback/adapters/hls-background-video/index.ts',
     'hls-video': 'src/playback/adapters/hls-video/index.ts',
-    'mux-audio': 'src/playback/adapters/mux-audio/index.ts',
-    'mux-background-video': 'src/playback/adapters/mux-background-video/index.ts',
-    'mux-video': 'src/playback/adapters/mux-video/index.ts',
   },
 });
 
@@ -30,8 +27,10 @@ export default defineConfig({
       build: {
         command: 'vp pack',
         dependsOn: workspaceTaskDependencies(),
-        input: cachedTaskInputs,
-        output: ['dist/**'],
+        cache: {
+          input: cachedTaskInputs,
+          output: ['dist/**'],
+        },
       },
       'test:ci': packageTestTask(),
     },
@@ -42,6 +41,16 @@ export default defineConfig({
     __DEV__: 'true',
   },
   test: {
+    // Vitest v4 compatibility: preserve mock call history.
+    // Remove after tests no longer rely on calls from setup or earlier tests.
+    // https://viteplus.dev/guide/vitest-v5#remove-unneeded-compatibility-settings
+    // https://vitest.dev/guide/migration/#clearmocks-is-enabled-by-default
+    clearMocks: false,
+    // Vitest v4 compatibility: keep separate Vite servers for inline projects.
+    // Remove when plugins and config hooks can run once for shared projects.
+    // https://viteplus.dev/guide/vitest-v5#remove-unneeded-compatibility-settings
+    // https://vitest.dev/guide/migration/#inline-projects-share-the-vite-server-by-default
+    sharedViteServer: false,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
@@ -101,6 +110,13 @@ export default defineConfig({
             'src/playback/actors/dom/**/*.test.ts',
           ],
           browser: {
+            locators: {
+              // Vitest v4 compatibility: keep partial, case-insensitive locator matching.
+              // Remove after updating locators for full, case-sensitive matches.
+              // https://viteplus.dev/guide/vitest-v5#remove-unneeded-compatibility-settings
+              // https://vitest.dev/guide/migration/#locators-are-strict-by-default
+              exact: false,
+            },
             enabled: true,
             headless: true,
             provider: playwright(),
@@ -115,6 +131,13 @@ export default defineConfig({
           name: 'playback-engines',
           include: ['src/playback/engines/**/*.test.ts'],
           browser: {
+            locators: {
+              // Vitest v4 compatibility: keep partial, case-insensitive locator matching.
+              // Remove after updating locators for full, case-sensitive matches.
+              // https://viteplus.dev/guide/vitest-v5#remove-unneeded-compatibility-settings
+              // https://vitest.dev/guide/migration/#locators-are-strict-by-default
+              exact: false,
+            },
             enabled: true,
             headless: true,
             provider: playwright(),
@@ -131,6 +154,13 @@ export default defineConfig({
           name: 'playback-adapters',
           include: ['src/playback/adapters/**/*.test.ts'],
           browser: {
+            locators: {
+              // Vitest v4 compatibility: keep partial, case-insensitive locator matching.
+              // Remove after updating locators for full, case-sensitive matches.
+              // https://viteplus.dev/guide/vitest-v5#remove-unneeded-compatibility-settings
+              // https://vitest.dev/guide/migration/#locators-are-strict-by-default
+              exact: false,
+            },
             enabled: true,
             headless: true,
             provider: playwright(),
