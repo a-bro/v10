@@ -272,7 +272,7 @@ plus what this record defers beyond the RFC:
   intent/fact slots, adapter properties (`cameraActive`, `screenShareActive`,
   `previewSource`, plural state/stream getters).
 - `packages/core/src/dom/store/features/capture-source.ts`,
-  `packages/core/src/core/ui/{screen-share-button,capture-placeholder,enable-devices-button}/*-core.ts`.
+  `packages/core/src/core/ui/{screen-share-button,capture-placeholder,enable-devices-button}/core.ts`.
 
 ## See also
 

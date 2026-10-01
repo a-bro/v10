@@ -1,6 +1,6 @@
 import '@app/styles.css';
 // React MoQ Publisher sandbox
-// http://localhost:5173/react-moq-publisher/
+// http://localhost:5173/moq-publisher-react/
 //
 // Renders the React publisher preset (`PublisherSkin` over `publisherFeatures`).
 // The default mode reuses the fake publish host from the HTML publisher
