@@ -70,11 +70,20 @@ export const CameraRadioGroupValue = forwardRef<HTMLSpanElement, CameraRadioGrou
 /** Renders menu radio items for the available cameras. */
 export const CameraRadioGroupOptions = forwardRef<HTMLDivElement, CameraRadioGroupOptionsProps>(
   function CameraRadioGroupOptions(componentProps, forwardedRef) {
-    const { renderItem, render, className, style, ...elementProps } = componentProps;
+    const {
+      renderItem,
+      render,
+      className,
+      style,
+      'aria-label': ariaLabelProp,
+      'aria-labelledby': ariaLabelledBy,
+      ...elementProps
+    } = componentProps;
     const cameras = useCameraRadioGroupContext();
     if (!cameras) return null;
 
     const { state, value, options, setValue } = cameras;
+    const ariaLabel = ariaLabelProp ?? (ariaLabelledBy === undefined ? cameras.label : undefined);
 
     return (
       <MenuRadioGroup
@@ -86,6 +95,8 @@ export const CameraRadioGroupOptions = forwardRef<HTMLDivElement, CameraRadioGro
         render={isFunction(render) ? (props: HTMLProps) => render(props, state) : render}
         value={value}
         onValueChange={setValue}
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledBy}
         aria-disabled={state.disabled || undefined}
       >
         {options.map((option) => {

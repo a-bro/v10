@@ -68,11 +68,20 @@ export const MicRadioGroupValue = forwardRef<HTMLSpanElement, MicRadioGroupValue
 /** Renders menu radio items for the available microphones. */
 export const MicRadioGroupOptions = forwardRef<HTMLDivElement, MicRadioGroupOptionsProps>(
   function MicRadioGroupOptions(componentProps, forwardedRef) {
-    const { renderItem, render, className, style, ...elementProps } = componentProps;
+    const {
+      renderItem,
+      render,
+      className,
+      style,
+      'aria-label': ariaLabelProp,
+      'aria-labelledby': ariaLabelledBy,
+      ...elementProps
+    } = componentProps;
     const microphones = useMicRadioGroupContext();
     if (!microphones) return null;
 
     const { state, value, options, setValue } = microphones;
+    const ariaLabel = ariaLabelProp ?? (ariaLabelledBy === undefined ? microphones.label : undefined);
 
     return (
       <MenuRadioGroup
@@ -84,6 +93,8 @@ export const MicRadioGroupOptions = forwardRef<HTMLDivElement, MicRadioGroupOpti
         render={isFunction(render) ? (props: HTMLProps) => render(props, state) : render}
         value={value}
         onValueChange={setValue}
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledBy}
         aria-disabled={state.disabled || undefined}
       >
         {options.map((option) => {

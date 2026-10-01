@@ -63,7 +63,7 @@ function PublishStatus() {
 
 function PublisherControls() {
   return (
-    <$.Controls.Root>
+    <$.Controls.Root visibility="always">
       <$.Controls.Backdrop className={styles.controls.backdrop} />
       <$.Controls.Content className={styles.controls.content}>
         <$.Tooltip.Provider>
