@@ -166,11 +166,11 @@ publisher,subscriber}.rs` and `js/net/src/ietf/{filter,parameters}.ts` on
   on draft-17 and newer**, matching §10.2. Draft-14 through -16 keep the
   length prefix. Older relays used a length prefix on all drafts; our
   draft-20-only codec now uses the bare form for both encoding and decoding.
-- **`INCLUDE_PROPERTIES` (0x35) is framed length-prefixed with a single byte
-  inside**, again by parity, although §10.2.21 calls it a uint8. moq-relay
-  0.17.0 (moq-dev/moq#4610) reads it as a bare byte, and so does our codec
-  since #58. The relay obeys it as a publisher and sends it only to opt out (which its upstream
-  subscriber does not do today).
+- **`INCLUDE_PROPERTIES` (0x35) was framed length-prefixed with a single byte
+  inside through 0.15.8**, again by parity, although §10.2.21 calls it a uint8.
+  moq-relay 0.17.0 (moq-dev/moq#4610) reads it as a bare byte, and so does our
+  codec since #58. The relay obeys it as a publisher and sends it only to opt
+  out (which its upstream subscriber does not do today).
 - Range filters 0x26/0x28 are length-prefixed (matches the spec's explicit
   Length field and our codec).
 - Draft-20 PUBLISH_OK (REQUEST_OK) carries no parameters.

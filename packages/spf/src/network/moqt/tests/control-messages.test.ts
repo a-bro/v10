@@ -396,11 +396,14 @@ describe('encodeMessageParameters', () => {
   });
 
   // Wire vector matches moq-relay 0.17.0, which decodes 0x35 as a bare bool (moq-dev/moq#4610).
-  it('frames INCLUDE_PROPERTIES as a bare byte and rejects values other than 0 and 1', () => {
-    const wire = Uint8Array.of(0x01, 0x35, 0x00);
+  it.each([0, 1] as const)('frames INCLUDE_PROPERTIES %i as a bare byte', (includeProperties) => {
+    const wire = Uint8Array.of(0x01, 0x35, includeProperties);
 
-    expect(encodeParameters({ includeProperties: 0 })).toEqual(wire);
-    expect(decodeMessageParameters(new ByteReader(wire))).toEqual({ includeProperties: 0 });
+    expect(encodeParameters({ includeProperties })).toEqual(wire);
+    expect(decodeMessageParameters(new ByteReader(wire))).toEqual({ includeProperties });
+  });
+
+  it('rejects INCLUDE_PROPERTIES values other than 0 and 1', () => {
     expect(() => decodeMessageParameters(new ByteReader(Uint8Array.of(0x01, 0x35, 0x02)))).toThrow(
       /INCLUDE_PROPERTIES/
     );
