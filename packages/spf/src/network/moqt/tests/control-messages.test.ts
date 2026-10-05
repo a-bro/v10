@@ -389,22 +389,21 @@ describe('encodeMessageParameters', () => {
 
   it('keeps parameters following a small LARGEST_OBJECT aligned', () => {
     const parameters: MessageParameters = { largestObject: { group: 0, object: 1 }, forward: 1, includeProperties: 0 };
-    const wire = Uint8Array.of(0x03, 0x09, 0x00, 0x01, 0x07, 0x01, 0x25, 0x01, 0x00);
+    const wire = Uint8Array.of(0x03, 0x09, 0x00, 0x01, 0x07, 0x01, 0x25, 0x00);
 
     expect(encodeParameters(parameters)).toEqual(wire);
     expect(decodeMessageParameters(new ByteReader(wire))).toEqual(parameters);
   });
 
-  it('frames INCLUDE_PROPERTIES as a length-prefixed byte and rejects values other than 0 and 1', () => {
-    expect(Array.from(encodeParameters({ includeProperties: 1 }))).toEqual([0x01, 0x35, 0x01, 0x01]);
+  // Wire vector matches moq-relay 0.17.0, which decodes 0x35 as a bare bool (moq-dev/moq#4610).
+  it('frames INCLUDE_PROPERTIES as a bare byte and rejects values other than 0 and 1', () => {
+    const wire = Uint8Array.of(0x01, 0x35, 0x00);
 
-    const writer = new ByteWriter();
-
-    writer.writeVarint(1);
-    writer.writeVarint(PARAMETER_TYPE.INCLUDE_PROPERTIES);
-    writer.writeVarint(1);
-    writer.writeUint8(2);
-    expect(() => decodeMessageParameters(new ByteReader(writer.toBytes()))).toThrow(/INCLUDE_PROPERTIES/);
+    expect(encodeParameters({ includeProperties: 0 })).toEqual(wire);
+    expect(decodeMessageParameters(new ByteReader(wire))).toEqual({ includeProperties: 0 });
+    expect(() => decodeMessageParameters(new ByteReader(Uint8Array.of(0x01, 0x35, 0x02)))).toThrow(
+      /INCLUDE_PROPERTIES/
+    );
   });
 
   it('encodes FILL_PARAMETERS as a nested parameter list', () => {
