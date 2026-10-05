@@ -21,7 +21,7 @@ Temporary implementation notes — delete before merge per `AGENTS.md`.
 **Issue #45 verification (2026-09-16, moq-relay 0.14.17):** the shared codec
 uses bare Locations in both directions. Fixed-byte tests pin SUBSCRIBE_OK,
 REQUEST_OK, multi-byte IDs, following parameters/properties, and truncation.
-INCLUDE_PROPERTIES keeps its length prefix.
+INCLUDE_PROPERTIES keeps its length prefix (until 0.17.0; see #58).
 
 A local `moqdev/moq-relay:0.14.17` container and Playwright Chromium exercised
 the publisher and subscriber worktrees together over WebTransport (`moqt-20`).
@@ -166,10 +166,11 @@ publisher,subscriber}.rs` and `js/net/src/ietf/{filter,parameters}.ts` on
   on draft-17 and newer**, matching §10.2. Draft-14 through -16 keep the
   length prefix. Older relays used a length prefix on all drafts; our
   draft-20-only codec now uses the bare form for both encoding and decoding.
-- **`INCLUDE_PROPERTIES` (0x35) is framed length-prefixed with a single byte
-  inside**, again by parity, although §10.2.21 calls it a uint8. The relay
-  obeys it as a publisher and sends it only to opt out (which its upstream
-  subscriber does not do today).
+- **`INCLUDE_PROPERTIES` (0x35) was framed length-prefixed with a single byte
+  inside through 0.15.8**, again by parity, although §10.2.21 calls it a uint8.
+  moq-relay 0.17.0 (moq-dev/moq#4610) reads it as a bare byte, and so does our
+  codec since #58. The relay obeys it as a publisher and sends it only to opt
+  out (which its upstream subscriber does not do today).
 - Range filters 0x26/0x28 are length-prefixed (matches the spec's explicit
   Length field and our codec).
 - Draft-20 PUBLISH_OK (REQUEST_OK) carries no parameters.
@@ -203,8 +204,8 @@ publisher,subscriber}.rs` and `js/net/src/ietf/{filter,parameters}.ts` on
    behind the edge.
 4. **`LARGEST_OBJECT` must encode and decode as two bare varints for
    0.14.17.** Both SUBSCRIBE_OK and REQUEST_OK can carry it once content
-   exists. Keep INCLUDE_PROPERTIES length-prefixed; its framing did not
-   change.
+   exists. INCLUDE_PROPERTIES stayed length-prefixed until moq-relay 0.17.0
+   made it a bare byte (#58).
 5. **Fills are not needed** for playback against the relay. Decode
    `FILL_PARAMETERS` and `INCLUDE_PROPERTIES` so a peer sending them does not
    kill a session (the publisher branch receives SUBSCRIBE), but requesting
@@ -226,7 +227,8 @@ publisher,subscriber}.rs` and `js/net/src/ietf/{filter,parameters}.ts` on
 **0.14.17 compatibility cutover (#45, 2026-09-16):** ship the bare-location
 codec together with the relay upgrade. There is no safe wire auto-detection:
 old clients fail against 0.14.17 and new clients cannot use older relays'
-length-prefixed locations. INCLUDE_PROPERTIES remains unchanged.
+length-prefixed locations. INCLUDE_PROPERTIES remained unchanged then; #58
+later made it a bare byte for 0.17.0.
 
 The whole fleet speaks `moqt-20`, so a hard cutover is viable and is the
 smaller change. Offering `['moqt-20', 'moqt-19']` and reading the negotiated
@@ -380,7 +382,7 @@ Branch points on a `draft: 19 | 20` value in `createMoqtSession` config:
   on draft-20, matching moq-relay 0.14.17 and PR #3561.
 - `MessageParameters`: add `fillParameters?: MessageParameters` (nested
   `encodeMessageParameters`; decoder enforces the allow-list and rejects it on
-  draft-19) and `includeProperties?: 0 | 1` (length-prefixed single byte;
+  draft-19) and `includeProperties?: 0 | 1` (bare uint8 since #58;
   reject values other than 0/1; reject on draft-19).
 - `FetchRequest` on 20 collapses to `{ requestId, trackNamespace, trackName,
   parameters }` with the range in `parameters.locationFilter`; the 19 shapes
