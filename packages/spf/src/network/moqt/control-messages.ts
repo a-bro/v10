@@ -583,7 +583,7 @@ function collectParameterEntries(parameters: MessageParameters): ParameterEntry[
   }
 
   if (parameters.includeProperties !== undefined) {
-    push(PARAMETER_TYPE.INCLUDE_PROPERTIES, (w) => w.writeLengthPrefixed(Uint8Array.of(parameters.includeProperties!)));
+    push(PARAMETER_TYPE.INCLUDE_PROPERTIES, (w) => w.writeUint8(parameters.includeProperties!));
   }
 
   return entries;
@@ -711,16 +711,12 @@ export function decodeMessageParameters(reader: ByteReader, scope: ParameterScop
         parameters.trackNamespacePrefix = readTrackNamespace(reader);
         break;
       case PARAMETER_TYPE.INCLUDE_PROPERTIES: {
-        // §10.2.21 calls the value a uint8; moq-relay frames it
-        // length-prefixed by the odd-type parity rule (moq-dev/moq#3255),
-        // including in 0.14.17; the bare Location change does not apply here.
-        const value = reader.readBytes(reader.readVarint());
+        // moq-relay framed this length-prefixed by type parity until 0.17.0
+        // (moq-dev/moq#4610), which reads the §10.2.21 uint8 bare.
+        const include = reader.readUint8();
+        if (include !== 0 && include !== 1) throw new MoqtProtocolError(`invalid INCLUDE_PROPERTIES value ${include}`);
 
-        if (value.length !== 1 || value[0]! > 1) {
-          throw new MoqtProtocolError(`invalid INCLUDE_PROPERTIES value ${Array.from(value).join(',')}`);
-        }
-
-        parameters.includeProperties = value[0] as 0 | 1;
+        parameters.includeProperties = include;
         break;
       }
       default: {
