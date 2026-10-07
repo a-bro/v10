@@ -103,8 +103,12 @@ export interface TrackPublisherActor extends MessageActor<
   TrackPublisherMessage
 > {
   /**
-   * Settles once every group sent so far has been written and its FIN has landed (or the group failed) — never rejects.
-   * Lets a teardown put a last frame on the wire before `destroy()` resets whatever is still queued.
+   * Settles once every group closed so far has been written and its FIN has landed (or the group failed) — never
+   * rejects. Lets a teardown put a last frame on the wire before `destroy()` resets whatever is still queued.
+   *
+   * Observes; it closes nothing. A keyframe-grouped track's in-progress group stays open until the next keyframe or
+   * `{type:'end'}`, so send `end` first when that group must be covered too. (`groupPerFrame` tracks close every group
+   * as it is written.)
    */
   flushed(): Promise<void>;
 }
