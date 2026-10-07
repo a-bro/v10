@@ -19,6 +19,9 @@
  * the catalog is the one channel every consumer can read: LOC's per-keyframe Config property (`loc-packaging.ts`) is an
  * odd-id MOQ object property that relays and non-SPF consumers drop without surfacing, so it is carried as a refresh
  * bonus, never the only copy.
+ *
+ * Live catalogs never carry `isComplete`: §5.1.3 makes it an irrevocable commitment that no track will change or carry
+ * content again (issue #60).
  */
 
 /** Version emitted — the newest version `parse-catalog.ts` accepts. */
@@ -200,7 +203,6 @@ export function buildMsfCatalog(input: MsfCatalogInput): string {
     pruneUndefined({
       version: MSF_CATALOG_VERSION,
       generatedAt: input.generatedAt,
-      isComplete: true,
       tracks,
       initDataList: initDataList.length > 0 ? initDataList : undefined,
     })

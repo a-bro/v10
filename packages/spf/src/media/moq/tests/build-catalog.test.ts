@@ -180,13 +180,14 @@ describe('buildMsfCatalog', () => {
     expect(new Uint8Array(toAudioDecoderConfig(audio[0]!)!.description as ArrayBuffer)).toEqual(audioSpecificConfig);
   });
 
-  it('emits the supported version, completeness, and no absent fields', () => {
+  it('emits the supported version and no absent fields', () => {
     const raw = JSON.parse(
       buildMsfCatalog({ namespace: NAMESPACE, audio: { name: 'audio', codec: 'opus' }, generatedAt: 1746104606044 })
     );
 
     expect(raw.version).toBe(MSF_CATALOG_VERSION);
-    expect(raw.isComplete).toBe(true);
+    // A live catalog must not claim the broadcast is over (§5.1.3).
+    expect(raw).not.toHaveProperty('isComplete');
     expect(raw.generatedAt).toBe(1746104606044);
     expect(raw.tracks).toEqual([
       {
