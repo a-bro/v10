@@ -197,7 +197,7 @@ export function createTrackPublisherActor(options: TrackPublisherOptions): Track
   let currentGroupFrames: Extract<TrackPublisherMessage, { type: 'frame' }>[] = [];
   /** Detached FIN settlements (see `finishCell`) — `flushed()` waits on them past the runner. */
   const pendingFins = new Set<Promise<void>>();
-  /** Opened data streams per subscription alias (see `streamCount`). */
+  /** Opened data streams per subscription alias (see `streamCount`); pruned to the current alias on each bind. */
   const streamsByAlias = new Map<number, number>();
 
   // Assigned right after createMachineActor returns; the runner tasks only
@@ -529,6 +529,14 @@ export function createTrackPublisherActor(options: TrackPublisherOptions): Track
             }
 
             boundAlias = msg.trackAlias;
+
+            // A new alias binds only after the session has ended every
+            // older subscription on the track, so their counts are dead
+            // weight. The current alias keeps its count across an unbind
+            // (a Forward State toggle rebinds the same alias).
+            for (const alias of streamsByAlias.keys()) {
+              if (alias !== msg.trackAlias) streamsByAlias.delete(alias);
+            }
 
             // Instant join: catalog-shaped tracks re-send their latest
             // change-driven frame (queued behind this message, boundAlias

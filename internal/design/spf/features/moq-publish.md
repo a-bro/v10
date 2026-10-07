@@ -146,7 +146,7 @@ Behaviors (`packages/spf/src/publish/behaviors/`; DOM-bound ones under
 | `pumpMediaFrames` | `dom/pump-media-frames.ts` | `MediaStreamTrackProcessor` read loops → `encode` messages; keyframe cadence |
 | `trackPublishStats` | `track-publish-stats.ts` | Sample encoder counters into `publishStats` (DOM-free via a structural actor view) |
 | `openPublishSession` | `open-publish-session.ts` | Own the publish session actor; gate on `endpoint` + `publishActivated` + capture `'active'`; mirror lifecycle into `sessionStatus` |
-| `setupTrackPublishers` | `setup-track-publishers.ts` | Register each track on the session's serve registry; own the per-track publisher actors; sync subscription bindings into them; FIN each track's subscriptions on teardown |
+| `setupTrackPublishers` | `setup-track-publishers.ts` | Register each track on the session's serve registry; own the per-track publisher actors; sync subscription bindings into them; on teardown, close each track's data streams, then end its subscriptions with PUBLISH_DONE (TRACK_ENDED) and a FIN |
 | `deriveCatalog` | `derive-catalog.ts` | Build + send the MSF catalog as object 0 of a fresh group on every input change |
 
 Actors and session:
@@ -269,8 +269,9 @@ publisher initiates no requests, so there is no response to bound.
   half (solicitation acceptance, suffix-relative NAMESPACE entries,
   announce-loss → `onAnnounceEnded`, NAMESPACE_DONE + no-GOAWAY close)
   and the serve half (alias = request ID, TIMESCALE declaration,
-  newest-subscription binding with clean replacement FINs, bare-FIN
-  track end) through `network/moqt/tests/helpers/raw-peer.ts`, the relay's
+  newest-subscription binding with bare-FIN ends for superseded
+  subscriptions, PUBLISH_DONE + FIN track end with exact Stream Counts)
+  through `network/moqt/tests/helpers/raw-peer.ts`, the relay's
   side of the flow the subscribe driver does not initiate.
 - **Full pipeline** —
   `publish/engines/moq/tests/publish-transport.test.ts`: real capture

@@ -338,7 +338,7 @@ describe('createTrackPublisherActor', () => {
     ]);
   });
 
-  it('counts the data streams opened under each subscription alias', async () => {
+  it('counts the data streams opened under each subscription alias, pruning superseded ones', async () => {
     const factory = makeStreamFactory();
     const publisher = createTrackPublisherActor({ openUniStream: factory.openUniStream, groupPerFrame: true });
     const frame = (timestampUs: number) =>
@@ -351,11 +351,20 @@ describe('createTrackPublisherActor', () => {
     publisher.send(frame(2));
     await vi.waitFor(() => expect(counters(publisher).publishedGroups).toBe(2));
 
-    publisher.send({ type: 'bind', trackAlias: 5 });
+    // A Forward State toggle unbinds and rebinds the same alias: its
+    // count must survive, or PUBLISH_DONE would under-report.
+    publisher.send({ type: 'unbind' });
+    publisher.send({ type: 'bind', trackAlias: 3 });
     publisher.send(frame(3));
     await vi.waitFor(() => expect(counters(publisher).publishedGroups).toBe(3));
+    expect(publisher.streamCount(3)).toBe(3);
 
-    expect([publisher.streamCount(3), publisher.streamCount(5), publisher.streamCount(7)]).toEqual([2, 1, 0]);
+    // A new alias supersedes the old subscription, whose count is pruned.
+    publisher.send({ type: 'bind', trackAlias: 5 });
+    publisher.send(frame(4));
+    await vi.waitFor(() => expect(counters(publisher).publishedGroups).toBe(4));
+
+    expect([publisher.streamCount(3), publisher.streamCount(5), publisher.streamCount(7)]).toEqual([0, 1, 0]);
     publisher.destroy();
   });
 
