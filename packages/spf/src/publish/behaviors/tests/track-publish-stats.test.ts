@@ -83,7 +83,7 @@ function makePublisher(counters: Partial<TrackPublisherCounters>): TrackPublishe
     context: { ...ZERO_PUBLISHER_COUNTERS, ...counters },
   });
 
-  return { snapshot, send: () => {}, destroy: () => {} };
+  return { snapshot, send: () => {}, flushed: async () => {}, destroy: () => {} };
 }
 
 function makeSessionActor(subscriberCount: number): PublishSessionActor {

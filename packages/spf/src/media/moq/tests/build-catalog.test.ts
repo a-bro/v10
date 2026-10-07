@@ -4,7 +4,7 @@ import { isResolvedPresentation } from '../../types';
 import { getTracksByType } from '../../utils/tracks';
 import { buildMsfCatalog, MSF_CATALOG_VERSION } from '../build-catalog';
 import { toAudioDecoderConfig, toVideoDecoderConfig } from '../codec-mapping';
-import { type MoqAudioTrack, type MoqVideoTrack, parseMoqCatalog } from '../parse-catalog';
+import { applyMoqCatalogUpdate, type MoqAudioTrack, type MoqVideoTrack, parseMoqCatalog } from '../parse-catalog';
 
 const NAMESPACE = ['live', 'abc123'];
 // The subscriber-side view of the same publication: catalog track under
@@ -180,13 +180,14 @@ describe('buildMsfCatalog', () => {
     expect(new Uint8Array(toAudioDecoderConfig(audio[0]!)!.description as ArrayBuffer)).toEqual(audioSpecificConfig);
   });
 
-  it('emits the supported version, completeness, and no absent fields', () => {
+  it('emits the supported version and no absent fields', () => {
     const raw = JSON.parse(
       buildMsfCatalog({ namespace: NAMESPACE, audio: { name: 'audio', codec: 'opus' }, generatedAt: 1746104606044 })
     );
 
     expect(raw.version).toBe(MSF_CATALOG_VERSION);
-    expect(raw.isComplete).toBe(true);
+    // A live catalog must not claim the broadcast is over (§5.1.3).
+    expect(raw).not.toHaveProperty('isComplete');
     expect(raw.generatedAt).toBe(1746104606044);
     expect(raw.tracks).toEqual([
       {
@@ -198,5 +199,17 @@ describe('buildMsfCatalog', () => {
         codec: 'opus',
       },
     ]);
+  });
+
+  it('emits the §11.3 end-of-broadcast catalog for complete, ignoring track inputs', () => {
+    const text = buildMsfCatalog({ ...AV_INPUT, generatedAt: 1746104606044, complete: true });
+
+    expect(JSON.parse(text)).toEqual({
+      version: MSF_CATALOG_VERSION,
+      generatedAt: 1746104606044,
+      isComplete: true,
+      tracks: [],
+    });
+    expect(applyMoqCatalogUpdate(undefined, text, { catalogNamespace: NAMESPACE }).isComplete).toBe(true);
   });
 });

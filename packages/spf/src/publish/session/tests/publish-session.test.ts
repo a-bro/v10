@@ -573,6 +573,37 @@ describe('createMoqtPublishSession', () => {
     subscriber.destroy();
   });
 
+  it('holds the FINs of end({ after }) until it settles, still opening streams inside the close drain', async () => {
+    const { pair, session, subscriber } = makePublishHarness();
+
+    await session.ready;
+    const track = session.registerTrack({ trackNamespace: NAMESPACE, trackName: 'catalog' });
+    const subscribe = await rawSubscribe(pair.server, 'catalog', 31);
+
+    await vi.waitFor(() => {
+      expect(subscribe.received).toHaveLength(1);
+    });
+
+    let release!: () => void;
+
+    track.end({ after: new Promise<void>((resolve) => (release = resolve)) });
+    session.close();
+    // The track's last object needs a stream after close() began: the
+    // drain window keeps the transport — and opens — available.
+    const lastObjectStream = await session.openUniStream();
+
+    void lastObjectStream.abort();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(subscribe.ended()).toBe(false);
+
+    release();
+    await vi.waitFor(() => {
+      expect(subscribe.ended()).toBe(true);
+    });
+    expect(subscribe.received.map((m) => m.kind)).toEqual(['subscribe-ok']);
+    subscriber.destroy();
+  });
+
   it('hands the binding to the newest subscription and FINs the replaced stream', async () => {
     const bindings: (number | undefined)[] = [];
     const endedRequests: number[] = [];

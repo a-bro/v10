@@ -284,6 +284,60 @@ describe('createTrackPublisherActor', () => {
     publisher.destroy();
   });
 
+  it('flushed() settles only once the last group is written and its FIN has landed', async () => {
+    const chunks: Uint8Array[] = [];
+    let releaseWrites!: () => void;
+    let writeGate: Promise<void> | undefined = new Promise<void>((resolve) => (releaseWrites = resolve));
+    let releaseClose: (() => void) | undefined;
+    let closed = false;
+    let aborted = false;
+    const openUniStream = async () =>
+      new WritableStream<Uint8Array>({
+        write: (chunk) => {
+          chunks.push(chunk);
+          return writeGate;
+        },
+        // The FIN settles detached from the runner (`finishCell`), so a
+        // flushed() that only awaited the runner would resolve here.
+        close: () =>
+          new Promise<void>((resolve) => {
+            releaseClose = () => {
+              closed = true;
+              resolve();
+            };
+          }),
+        abort: () => {
+          aborted = true;
+        },
+      });
+    const publisher = createTrackPublisherActor({ openUniStream, groupPerFrame: true });
+    let flushed = false;
+
+    publisher.send({ type: 'bind', trackAlias: 3 });
+    publisher.send({ type: 'frame', payload: new Uint8Array([7]), properties: [], keyframe: true, timestampUs: 0 });
+    publisher.send({ type: 'end' });
+    void publisher.flushed().then(() => (flushed = true));
+
+    await vi.waitFor(() => expect(chunks.length).toBeGreaterThan(0));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(flushed).toBe(false);
+
+    releaseWrites();
+    writeGate = undefined;
+    await vi.waitFor(() => expect(releaseClose).toBeDefined());
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(flushed).toBe(false);
+
+    releaseClose!();
+    await vi.waitFor(() => expect(flushed).toBe(true));
+    publisher.destroy();
+
+    expect({ closed, aborted }).toEqual({ closed: true, aborted: false });
+    expect((await parseSubgroup({ chunks, closed, aborted })).objects.map((object) => [...object.payload])).toEqual([
+      [7],
+    ]);
+  });
+
   it('ignores delta frames before the first keyframe', async () => {
     const factory = makeStreamFactory();
     const publisher = createTrackPublisherActor({ openUniStream: factory.openUniStream });
