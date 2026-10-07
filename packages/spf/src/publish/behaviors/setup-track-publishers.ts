@@ -21,7 +21,9 @@
  * Cluster-owner reactor per the per-type setup-actor convention: the encoder chunk router (the engine's default
  * `chunkSink`) and `deriveCatalog` only read the slots — they never create the actors. On session loss, endpoint
  * change, or teardown the actors are destroyed in reverse creation order, each track's live subscriptions get their
- * clean FIN (`handle.end()`), and the slots are cleared.
+ * clean FIN (`handle.end()`), and the slots are cleared. When the session is still serving at teardown, the broadcast
+ * is ending on purpose, so the catalog track's last group is the MSF end-of-broadcast catalog (§11.3) — never on a
+ * session loss, which may yet reconnect and must not mark the broadcast complete.
  *
  * Sole writer of the track-publisher context slots (the four media slots plus `dataTrackProducers`). Per-stream
  * failures are deliberately not surfaced as `publishError` anymore: under pull-through ingest the peer resets in-flight
@@ -32,15 +34,18 @@ import { defineBehavior } from '../../core/composition/create-composition';
 import type { Reactor } from '../../core/reactors/create-machine-reactor';
 import { createMachineReactor } from '../../core/reactors/create-machine-reactor';
 import { peek, type ReadonlySignal, type Signal, signal } from '../../core/signals/primitives';
+import type { BuildMsfCatalog } from '../../media/moq/build-catalog';
+import { buildMsfCatalog } from '../../media/moq/build-catalog';
 import { LOC_PROPERTY, MICROSECONDS_PER_SECOND } from '../../media/moq/loc';
 import { isMediaCatalogRole } from '../../media/moq/parse-catalog';
 import type { TrackPublisherActor } from '../actors/track-publisher';
 import { createTrackPublisherActor } from '../actors/track-publisher';
-import type {
-  MoqtPublishSession,
-  PublishEndpoint,
-  PublishSessionActor,
-  RegisteredTrack,
+import {
+  CLOSE_FLUSH_TIMEOUT_MS,
+  type MoqtPublishSession,
+  type PublishEndpoint,
+  type PublishSessionActor,
+  type RegisteredTrack,
 } from '../session/publish-session';
 
 /**
@@ -221,12 +226,51 @@ export interface SetupTrackPublishersConfig {
    * nothing — a data-only broadcast is out of scope.
    */
   dataTracks?: PublishDataTrackConfig[];
+  /**
+   * Catalog-JSON builder seam for the end-of-broadcast catalog; default `buildMsfCatalog` (shared with
+   * `deriveCatalog`).
+   */
+  buildCatalog?: BuildMsfCatalog;
 }
 
 type SetupTrackPublishersFsmState = 'preconditions-unmet' | 'publishers-ready';
 
 function hasEncoding(encodings: ActiveEncodingsFacts | undefined): boolean {
   return Boolean(encodings && (encodings.camera || encodings.screen || encodings.audio));
+}
+
+const textEncoder = new TextEncoder();
+
+/**
+ * End the catalog track with the MSF end-of-broadcast catalog (§11.3: `isComplete`, no tracks) as its last group. The
+ * subscription FINs wait for that group to land — bounded by the session's close drain window, so a stalled stream
+ * cannot hold the teardown — and only then is the publisher destroyed.
+ */
+function endCatalogTrack(
+  handle: RegisteredTrack,
+  publisher: TrackPublisherActor,
+  namespace: readonly string[],
+  buildCatalog: BuildMsfCatalog
+): void {
+  publisher.send({
+    type: 'frame',
+    payload: textEncoder.encode(buildCatalog({ namespace, complete: true })),
+    properties: [],
+    keyframe: true,
+    timestampUs: 0,
+  });
+  publisher.send({ type: 'end' });
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const flushed = Promise.race([
+    publisher.flushed(),
+    new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, CLOSE_FLUSH_TIMEOUT_MS);
+    }),
+  ]).finally(() => clearTimeout(timer));
+
+  handle.end({ after: flushed });
+  void flushed.then(() => publisher.destroy());
 }
 
 /**
@@ -406,6 +450,13 @@ function setupTrackPublishersSetup({
             // the peer even when this cleanup runs as part of session
             // teardown (see the composition-order note in the moq engine).
             return () => {
+              // Still serving at teardown means the broadcast is ending on
+              // purpose (unpublish, endpoint change, engine destroy); a
+              // failed, closed, or GOAWAY-draining session is not an end
+              // of broadcast, and its transport may not take the write.
+              const status = peek(actor.snapshot).context.status;
+              const endOfBroadcast = status === 'ready' || status === 'live';
+
               cluster.set(undefined);
               context.dataTrackProducers.set(undefined);
               context.audioTrackPublisher.set(undefined);
@@ -414,6 +465,12 @@ function setupTrackPublishersSetup({
               context.catalogTrackPublisher.set(undefined);
 
               for (const { handle, publisher } of [...next.created].reverse()) {
+                // Last, after every media track has ended — the §11.3 order.
+                if (endOfBroadcast && handle.trackName === CATALOG_TRACK_NAME) {
+                  endCatalogTrack(handle, publisher, next.namespace, config.buildCatalog ?? buildMsfCatalog);
+                  continue;
+                }
+
                 // Quiesce: 'end' FINs the open group, then the track's
                 // live subscriptions get their clean stream FIN (the
                 // clean track end — no trailing message; a relay

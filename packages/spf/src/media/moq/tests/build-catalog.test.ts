@@ -4,7 +4,7 @@ import { isResolvedPresentation } from '../../types';
 import { getTracksByType } from '../../utils/tracks';
 import { buildMsfCatalog, MSF_CATALOG_VERSION } from '../build-catalog';
 import { toAudioDecoderConfig, toVideoDecoderConfig } from '../codec-mapping';
-import { type MoqAudioTrack, type MoqVideoTrack, parseMoqCatalog } from '../parse-catalog';
+import { applyMoqCatalogUpdate, type MoqAudioTrack, type MoqVideoTrack, parseMoqCatalog } from '../parse-catalog';
 
 const NAMESPACE = ['live', 'abc123'];
 // The subscriber-side view of the same publication: catalog track under
@@ -199,5 +199,17 @@ describe('buildMsfCatalog', () => {
         codec: 'opus',
       },
     ]);
+  });
+
+  it('emits the §11.3 end-of-broadcast catalog for complete, ignoring track inputs', () => {
+    const text = buildMsfCatalog({ ...AV_INPUT, generatedAt: 1746104606044, complete: true });
+
+    expect(JSON.parse(text)).toEqual({
+      version: MSF_CATALOG_VERSION,
+      generatedAt: 1746104606044,
+      isComplete: true,
+      tracks: [],
+    });
+    expect(applyMoqCatalogUpdate(undefined, text, { catalogNamespace: NAMESPACE }).isComplete).toBe(true);
   });
 });

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { signal } from '../../../core/signals/primitives';
+import { MSF_CATALOG_VERSION } from '../../../media/moq/build-catalog';
 import { parseLocProperties } from '../../../media/moq/loc';
 import { REQUEST_ERROR_CODE } from '../../../network/moqt/control-messages';
 import type { MoqtObject } from '../../../network/moqt/object-stream';
@@ -290,6 +291,63 @@ describe('setupTrackPublishers', () => {
       expect(context.catalogTrackPublisher.get()).toBeUndefined();
     });
     expect(publisher.snapshot.get().value).toBe('destroyed');
+  });
+
+  it('ends a broadcast stopped on purpose with the §11.3 end-of-broadcast catalog before the catalog FIN', async () => {
+    const { actor, peer, server } = makeSessionActor();
+    const { state, context } = setupBehavior();
+    const catalogs: unknown[] = [];
+    const finishedGroups: number[] = [];
+    const onSubgroupReset = vi.fn();
+
+    state.endpoint.set(ENDPOINT);
+    state.activeEncodings.set({ audio: AUDIO_CONFIG });
+    context.publishSessionActor.set(actor);
+    void solicitNamespace(server, []);
+    await vi.waitFor(() => expect(context.catalogTrackPublisher.get()).toBeDefined());
+    peer.subscribe(
+      { trackNamespace: ENDPOINT.namespace, trackName: 'catalog' },
+      {
+        onObject: (object) => catalogs.push(JSON.parse(new TextDecoder().decode(object.payload))),
+        onSubgroupEnd: ({ groupId }) => finishedGroups.push(groupId),
+        onSubgroupReset,
+      }
+    );
+    await vi.waitFor(() => expect(actor.snapshot.get().context.trackBindings.catalog).toBeDefined());
+    context.catalogTrackPublisher.get()!.send({
+      type: 'frame',
+      payload: new TextEncoder().encode(JSON.stringify({ version: MSF_CATALOG_VERSION, tracks: [] })),
+      properties: [],
+      keyframe: true,
+      timestampUs: 0,
+    });
+    await vi.waitFor(() => expect(catalogs).toHaveLength(1));
+
+    // `openPublishSession`'s unpublish order: the slot clears, then the
+    // session starts its orderly close — before this cleanup runs.
+    context.publishSessionActor.set(undefined);
+    actor.destroy();
+
+    await vi.waitFor(() => expect(finishedGroups).toHaveLength(2));
+    expect(catalogs.at(-1)).toEqual({ version: MSF_CATALOG_VERSION, isComplete: true, tracks: [] });
+    expect(onSubgroupReset).not.toHaveBeenCalled();
+  });
+
+  it('never marks the broadcast complete when the session is lost', async () => {
+    const { actor, server, client } = makeSessionActor();
+    const { state, context } = setupBehavior();
+
+    state.endpoint.set(ENDPOINT);
+    state.activeEncodings.set({ audio: AUDIO_CONFIG });
+    context.publishSessionActor.set(actor);
+    void solicitNamespace(server, []);
+    await vi.waitFor(() => expect(actor.snapshot.get().context.status).toBe('live'));
+    const catalog = context.catalogTrackPublisher.get()!;
+    const send = vi.spyOn(catalog, 'send');
+
+    client.close();
+    await vi.waitFor(() => expect(context.catalogTrackPublisher.get()).toBeUndefined());
+    expect(send.mock.calls.map(([message]) => message.type)).toEqual(['end']);
   });
 
   it('registers configured data tracks with the cluster and serves a producer-published payload', async () => {

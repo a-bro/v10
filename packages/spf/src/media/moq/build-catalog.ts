@@ -21,7 +21,7 @@
  * bonus, never the only copy.
  *
  * Live catalogs never carry `isComplete`: §5.1.3 makes it an irrevocable commitment that no track will change or carry
- * content again (issue #60).
+ * content again (issue #60). Only the `complete` input emits it, as the §11.3 end-of-broadcast catalog.
  */
 
 /** Version emitted — the newest version `parse-catalog.ts` accepts. */
@@ -81,6 +81,12 @@ export interface MsfCatalogInput {
   data?: readonly MsfCatalogDataTrackInput[];
   /** Catalog generation time (§5.2.24), epoch milliseconds. */
   generatedAt?: number;
+  /**
+   * The broadcast has ended for good (§11.3): emit `isComplete` with an empty `tracks` array, ignoring every track
+   * input. Only for the broadcast's last catalog — §5.1.3 makes the flag irrevocable, so a live catalog never carries
+   * it.
+   */
+  complete?: boolean;
 }
 
 /** The `buildCatalog` config seam's shape. */
@@ -127,6 +133,12 @@ function registerInitData(entries: MsfInitDataEntry[], name: string, initData: U
  * drafts settle on.
  */
 export function buildMsfCatalog(input: MsfCatalogInput): string {
+  if (input.complete) {
+    return JSON.stringify(
+      pruneUndefined({ version: MSF_CATALOG_VERSION, generatedAt: input.generatedAt, isComplete: true, tracks: [] })
+    );
+  }
+
   const namespace = input.namespace.join('/');
   const shared = { namespace, packaging: 'loc', isLive: true };
   // Only grouped once a screen track exists — a camera-only catalog stays

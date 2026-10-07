@@ -125,8 +125,12 @@ export interface RegisteredTrack {
   /**
    * End the track: FIN every live subscription's request stream (a FIN with no trailing bytes is the clean track end)
    * and refuse future SUBSCRIBEs with DOES_NOT_EXIST. Idempotent.
+   *
+   * `after` holds the FINs (not the refusal) until it settles, so a last object still in flight — the MSF
+   * end-of-broadcast catalog — reaches subscribers before their subscription ends. An orderly `close()` waits on it
+   * within its bounded drain window.
    */
-  end(): void;
+  end(options?: { after?: Promise<unknown> }): void;
 }
 
 export interface MoqtPublishSession {
@@ -511,7 +515,7 @@ class MoqtPublishSessionImpl implements MoqtPublishSession {
 
     return {
       trackName: options.trackName,
-      end: () => this.#endTrack(track),
+      end: (options) => this.#endTrack(track, options?.after),
     };
   }
 
@@ -520,10 +524,23 @@ class MoqtPublishSessionImpl implements MoqtPublishSession {
    * future SUBSCRIBEs. The aggregated write completion lands on `track.doneFlushed` so `close()` can hold the transport
    * open until the FINs reach the wire.
    */
-  #endTrack(track: TrackRecord): void {
+  #endTrack(track: TrackRecord, after?: Promise<unknown>): void {
     if (track.done) return;
 
     track.done = true;
+
+    if (after) {
+      track.doneFlushed = after.then(
+        () => this.#finTrack(track),
+        () => this.#finTrack(track)
+      );
+      return;
+    }
+
+    track.doneFlushed = this.#finTrack(track);
+  }
+
+  #finTrack(track: TrackRecord): Promise<void> {
     const writes: Promise<void>[] = [...track.pendingFins];
     let hadReported = false;
 
@@ -551,7 +568,7 @@ class MoqtPublishSessionImpl implements MoqtPublishSession {
       this.#callbacks.onTrackBinding?.({ trackName: track.trackName, trackAlias: undefined });
     }
 
-    track.doneFlushed = Promise.all(writes).then(() => {});
+    return Promise.all(writes).then(() => {});
   }
 
   openUniStream(options?: { sendOrder?: number }): Promise<WritableStream<Uint8Array>> {
@@ -560,8 +577,12 @@ class MoqtPublishSessionImpl implements MoqtPublishSession {
     // the session, and hammering createUnidirectionalStream() on a
     // torn-down WebTransport segfaults Chromium's renderer (null deref in
     // the native session teardown race) — observed against a relay that
-    // resets every stream on protocol disagreement.
-    if (this.#destroyed || this.#closing) {
+    // resets every stream on protocol disagreement. An orderly close's
+    // drain window still accepts opens: the transport is alive until the
+    // drain closes it (which also marks the session destroyed), and a
+    // track ending with a last object (`end({ after })`) needs a stream
+    // for it.
+    if (this.#destroyed) {
       return Promise.reject(new Error('moq publish session: closed'));
     }
 

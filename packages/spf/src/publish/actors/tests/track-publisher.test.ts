@@ -284,6 +284,38 @@ describe('createTrackPublisherActor', () => {
     publisher.destroy();
   });
 
+  it('flushed() settles once the last group is written and FINed, so a destroy after it loses nothing', async () => {
+    const factory = makeStreamFactory();
+    const publisher = createTrackPublisherActor({ openUniStream: factory.openUniStream, groupPerFrame: true });
+    const frame = {
+      type: 'frame',
+      payload: new Uint8Array([7]),
+      properties: [],
+      keyframe: true,
+      timestampUs: 0,
+    } as const;
+
+    publisher.send({ type: 'bind', trackAlias: 3 });
+    factory.gate = true;
+    publisher.send(frame);
+    publisher.send({ type: 'end' });
+
+    let flushed = false;
+    const settled = publisher.flushed().then(() => (flushed = true));
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(flushed).toBe(false);
+
+    factory.gate = false;
+    factory.releaseAll();
+    await settled;
+    publisher.destroy();
+
+    expect(factory.streams).toHaveLength(1);
+    expect(factory.streams[0]).toMatchObject({ closed: true, aborted: false });
+    expect((await parseSubgroup(factory.streams[0]!)).objects.map((object) => [...object.payload])).toEqual([[7]]);
+  });
+
   it('ignores delta frames before the first keyframe', async () => {
     const factory = makeStreamFactory();
     const publisher = createTrackPublisherActor({ openUniStream: factory.openUniStream });

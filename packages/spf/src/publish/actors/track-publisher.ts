@@ -97,7 +97,17 @@ export type TrackPublisherMessage =
     }
   | { type: 'end' };
 
-export type TrackPublisherActor = MessageActor<TrackPublisherState, TrackPublisherCounters, TrackPublisherMessage>;
+export interface TrackPublisherActor extends MessageActor<
+  TrackPublisherState,
+  TrackPublisherCounters,
+  TrackPublisherMessage
+> {
+  /**
+   * Settles once every group sent so far has been written and its FIN has landed (or the group failed) — never rejects.
+   * Lets a teardown put a last frame on the wire before `destroy()` resets whatever is still queued.
+   */
+  flushed(): Promise<void>;
+}
 
 export interface TrackPublisherOptions {
   openUniStream: OpenUniStream;
@@ -175,6 +185,8 @@ export function createTrackPublisherActor(options: TrackPublisherOptions): Track
    * peer. Reset on each keyframe; group-per-frame tracks use `replayLastGroupOnBind` instead.
    */
   let currentGroupFrames: Extract<TrackPublisherMessage, { type: 'frame' }>[] = [];
+  /** Detached FIN settlements (see `finishCell`) — `flushed()` waits on them past the runner. */
+  const pendingFins = new Set<Promise<void>>();
 
   // Assigned right after createMachineActor returns; the runner tasks only
   // complete asynchronously, well after construction.
@@ -211,8 +223,10 @@ export function createTrackPublisherActor(options: TrackPublisherOptions): Track
   const finishCell = (cell: GroupCell): void => {
     removeCell(cell);
     const fin = cell.writer?.fin() ?? Promise.resolve();
+    const settled = fin.then(() => inner?.send({ type: 'group-finished' }), failCell(cell));
 
-    fin.then(() => inner?.send({ type: 'group-finished' }), failCell(cell));
+    pendingFins.add(settled);
+    void settled.finally(() => pendingFins.delete(settled));
   };
 
   /**
@@ -567,6 +581,10 @@ export function createTrackPublisherActor(options: TrackPublisherOptions): Track
     },
     send(message: TrackPublisherMessage): void {
       actor.send(message);
+    },
+    async flushed(): Promise<void> {
+      await runner.settled;
+      await Promise.all(pendingFins);
     },
     destroy(): void {
       // Every opened stream must end deterministically: the open group
