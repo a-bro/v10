@@ -49,7 +49,7 @@ none is separately composable today.
 |---|---|---|
 | Capture | Device enumeration (`devicechange`-reactive, label refresh on grant); capture-source acquisition (`getUserMedia` camera, `getDisplayMedia` + microphone-merge screen share, re-acquire on selection-identity change, stale-async guards); preview mirroring via `srcObject` (forced muted + playsInline); mute toggles via `track.enabled` (capture keeps running) | **Implemented** |
 | Encode | `isConfigSupported` probing over a candidate ladder (default `avc1.42E01F` in `avc` bitstream format with a `vp8` fallback; Opus with a 48 kHz fallback; `config.video.codec` prepends rather than replaces); `selectEncoderConfig` strategy resolves support → active encodings; per-kind WebCodecs encoder actors, each stamping one epoch of the kind's `TrackTimeline` — a rebuilt actor (capture-source switch, encoding change) continues the track's published clock domain plus the real monotonic acquisition gap instead of opening a fresh wallclock anchor; frame pumping with a timestamp-driven forced-keyframe cadence so **GoP = MoQ group** (`groupDurationSec`, default 2 s); LOC packaging of every chunk (Timestamp / Timescale / Config-on-keyframes) | **Implemented** |
-| Transport | Publish session speaking draft-19 with **announce-and-serve ingest** (see the decision below): SETUP exchange; inbound SUBSCRIBE_NAMESPACE solicitations answered with REQUEST_OK and held as the announce carrier; the namespace announced as a NAMESPACE entry on every covering solicitation (`'live'` = announced); inbound SUBSCRIBEs answered with SUBSCRIBE_OK carrying alias = the request ID and a microsecond TIMESCALE track property; REQUEST_UPDATE routing; GOAWAY → `draining`; track end = a bare FIN of each subscription stream; close retracts the announce (NAMESPACE_DONE) and sends **no GOAWAY**; one `TrackPublisherActor` per track writing subgroup streams **only while bound to a live subscription** (video: new group per keyframe, joins at the next keyframe on bind; audio + catalog: group-per-frame; catalog replays its latest frame on every bind); MSF catalog derivation re-sent on any input-identity change | **Implemented** |
+| Transport | Publish session speaking draft-19 with **announce-and-serve ingest** (see the decision below): SETUP exchange; inbound SUBSCRIBE_NAMESPACE solicitations answered with REQUEST_OK and held as the announce carrier; the namespace announced as a NAMESPACE entry on every covering solicitation (`'live'` = announced); inbound SUBSCRIBEs answered with SUBSCRIBE_OK carrying alias = the request ID and a microsecond TIMESCALE track property; REQUEST_UPDATE routing; GOAWAY → `draining`; track end = PUBLISH_DONE (TRACK_ENDED, exact Stream Count) then FIN on each subscription stream; close retracts the announce (NAMESPACE_DONE) and sends **no GOAWAY**; one `TrackPublisherActor` per track writing subgroup streams **only while bound to a live subscription** (video: new group per keyframe, joins at the next keyframe on bind; audio + catalog: group-per-frame; catalog replays its latest frame on every bind); MSF catalog derivation re-sent on any input-identity change | **Implemented** |
 | Observability | ~1 Hz `publishStats` sampling from the encoder actor counters (`encodedFps`, bitrates, `droppedFrames`, `bytesSent`) | **Implemented** — `droppedGroups` is counted on the track publishers but not yet folded into `publishStats`; `subscriberCount` is tracked on the session actor but surfaces as `NaN` |
 
 ### Ingest model: announce-and-serve (2026-08-07)
@@ -78,10 +78,12 @@ own reference clients use:
   next keyframe; the catalog track replays its latest frame on every
   bind because catalog frames flow on change, and a fresh subscription
   must not wait for the next one.
-- **Three peer-verified teardown rules** (moq-relay 0.14.7 source):
-  a track ends by a bare FIN of the subscription stream — any trailing
-  byte (the old PUBLISH_DONE) makes the relay *abort* the track for
-  every viewer; a client GOAWAY closes the whole session (code 17); and
+- **Three peer-verified teardown rules**: a track ends with
+  PUBLISH_DONE (TRACK_ENDED, exact Stream Count) then a FIN of the
+  subscription stream — moq-relay 0.17.0 forwards that as "track ended",
+  but reports a bare FIN as "internal error" (older moq-relay builds
+  abort the track on any byte after SUBSCRIBE_OK; they are not
+  supported); a client GOAWAY closes the whole session (code 17); and
   SUBSCRIBE_OK should declare the TIMESCALE track property or the relay
   discards object TIMESTAMP extensions and re-stamps frames on arrival.
 - **Per-stream failures are ordinary lifecycle now** — the relay resets

@@ -21,9 +21,10 @@
  * Cluster-owner reactor per the per-type setup-actor convention: the encoder chunk router (the engine's default
  * `chunkSink`) and `deriveCatalog` only read the slots — they never create the actors. On session loss, endpoint
  * change, or teardown the actors are destroyed in reverse creation order, each track's live subscriptions get their
- * clean FIN (`handle.end()`), and the slots are cleared. When the session is still serving at teardown, the broadcast
- * is ending on purpose, so the catalog track's last group is the MSF end-of-broadcast catalog (§11.3) — never on a
- * session loss, which may yet reconnect and must not mark the broadcast complete.
+ * clean end — PUBLISH_DONE with TRACK_ENDED, then FIN (`handle.end()`) — and the slots are cleared. When the session is
+ * still serving at teardown, the broadcast is ending on purpose, so the catalog track's last group is the MSF
+ * end-of-broadcast catalog (§11.3) — never on a session loss, which may yet reconnect and must not mark the broadcast
+ * complete.
  *
  * Sole writer of the track-publisher context slots (the four media slots plus `dataTrackProducers`). Per-stream
  * failures are deliberately not surfaced as `publishError` anymore: under pull-through ingest the peer resets in-flight
@@ -317,6 +318,9 @@ function addTrackPublisher(
 
       return largestGroupId >= 0 ? { group: largestGroupId, object: largestObjectId } : undefined;
     },
+    // ...and the streams it opened per subscription, for the Stream Count
+    // a track end reports in PUBLISH_DONE (§10.12).
+    getStreamCount: (trackAlias) => publisher.streamCount(trackAlias),
   });
 
   cluster.created.push({ handle, publisher, boundAlias: undefined });
@@ -472,10 +476,8 @@ function setupTrackPublishersSetup({
                 }
 
                 // Quiesce: 'end' FINs the open group, then the track's
-                // live subscriptions get their clean stream FIN (the
-                // clean track end — no trailing message; a relay
-                // aborts the track on any post-SUBSCRIBE_OK byte), then
-                // destroy() force-ends whatever is left.
+                // live subscriptions get PUBLISH_DONE (TRACK_ENDED) and
+                // a FIN, then destroy() force-ends whatever is left.
                 publisher.send({ type: 'end' });
                 handle.end();
                 publisher.destroy();

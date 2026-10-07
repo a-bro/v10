@@ -37,6 +37,7 @@ const MESSAGE_TYPE = {
   REQUEST_ERROR: 0x5,
   REQUEST_OK: 0x7,
   NAMESPACE: 0x8,
+  PUBLISH_DONE: 0xb,
   NAMESPACE_DONE: 0xe,
   FETCH: 0x16,
   PUBLISH: 0x1d,
@@ -662,8 +663,8 @@ export function createPublisherLoopbackRelay({ onLog }: PublisherLoopbackRelayOp
 
     /**
      * One live upstream subscription per track: SUBSCRIBE, bind the SUBSCRIBE_OK's alias for the data-stream router,
-     * then hold the stream open. It ends by FIN alone (no PUBLISH_DONE exists in this flow) — the publisher's, ending
-     * the track for good, or our own via `handle.release()`, withdrawing a track no player watches.
+     * then hold the stream open. It ends with the publisher's PUBLISH_DONE and FIN, ending the track for good, or with
+     * our own FIN via `handle.release()`, withdrawing a track no player watches.
      */
     const runUpstreamSubscription = async (
       track: TrackBuffer,
@@ -692,7 +693,7 @@ export function createPublisherLoopbackRelay({ onLog }: PublisherLoopbackRelayOp
             const reason = fields.string();
 
             if (errorCode === ERROR_DOES_NOT_EXIST && track.ended) {
-              // Done, not late: the publisher FINed this track and has
+              // Done, not late: the publisher ended this track and has
               // not re-registered it, so DOES_NOT_EXIST is terminal —
               // mirror the real relay, which aborts the request rather
               // than retrying, by ending the late subscribers. Each
@@ -767,20 +768,32 @@ export function createPublisherLoopbackRelay({ onLog }: PublisherLoopbackRelayOp
           `upstream SUBSCRIBE ${track.name} → alias ${trackAlias}${timescale === undefined ? '' : ` (timescale ${timescale})`}`
         );
 
-        // Hold for the FIN — the publisher's clean track end, or our own
-        // release. A subscription ends by FIN *alone*: any byte after
-        // SUBSCRIBE_OK is a protocol violation, and the real relay
-        // aborts the track for every viewer — mirror that by ending each
-        // downstream subscription rather than silently draining.
-        if (!(await reader.atEnd())) {
-          log(`upstream ${track.name}: data after SUBSCRIBE_OK — aborting the track for its viewers`);
+        // Hold for the end — the publisher's PUBLISH_DONE then FIN (the
+        // clean track end), or our own release. Anything else after
+        // SUBSCRIBE_OK aborts the track for every viewer.
+        let publishDone = false;
 
-          for (const subscriber of [...track.subscribers]) subscriber.end();
-        } else if (handle.released) {
+        if (!(await reader.atEnd())) {
+          const message = await readControlFrame(reader);
+
+          publishDone = message.type === MESSAGE_TYPE.PUBLISH_DONE && (await reader.atEnd());
+
+          if (!publishDone) {
+            log(
+              `upstream ${track.name}: unexpected 0x${message.type.toString(16)} after SUBSCRIBE_OK — aborting the track`
+            );
+
+            for (const subscriber of [...track.subscribers]) subscriber.end();
+
+            return;
+          }
+        }
+
+        if (handle.released && !publishDone) {
           log(`upstream unsubscribe ${track.name} — no player interest`);
         } else {
-          // The publisher's FIN is the END of the track: propagate it —
-          // the same clean FIN toward every attached viewer — so no
+          // The publisher's PUBLISH_DONE + FIN is the END of the track:
+          // propagate it — a clean FIN toward every attached viewer — so no
           // player hangs on a dead track and a later publisher session
           // cannot resume stale subscriptions. The downstream teardowns'
           // releaseUpstream calls land after this routine's finally has
