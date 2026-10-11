@@ -667,11 +667,17 @@ class MoqtPublishSessionImpl implements MoqtPublishSession {
 
         if (!subscriber.fills.has(fill) || subscriber.finished) return;
 
-        // PUBLISH_DONE's Stream Count is the streams this side opened,
-        // fill fetch streams included (§10.12), so count this one even
-        // when the reset may discard its header. The subscriber waits
-        // out a timeout for a stream reset before its header; a count
-        // short of the streams it does receive may close the session.
+        // PUBLISH_DONE's Stream Count includes fill fetch streams
+        // (§10.12). Count in the same synchronous step that commits this
+        // stream to its FETCH_HEADER — the track publisher's rule for
+        // subgroup streams — so any PUBLISH_DONE covers every fill that
+        // carries a header. A fill still opening when the track ended
+        // was stopped by the guard above: it is reset with no header, so
+        // the subscriber cannot attribute it to this subscription and
+        // leaving it uncounted cannot put the subscriber over the count.
+        // A counted fill whose reset discards its header (no commit())
+        // or whose write rejects over-counts by one; for that §10.12 has
+        // the subscriber fall back to a timeout.
         subscriber.fillStreams++;
         await writer.write(encodeFetchHeader(requestId));
 

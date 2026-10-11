@@ -1327,6 +1327,54 @@ describe('createMoqtPublishSession', () => {
     await finish();
   });
 
+  it.each([{ reliableReset: true }, { reliableReset: false }])(
+    'leaves a fill still opening when the track ends out of the Stream Count, headerless (reliable reset: $reliableReset)',
+    async ({ reliableReset }) => {
+      let resolveOpen!: (stream: WritableStream<Uint8Array>) => void;
+      const openFillStream = vi.fn(
+        () =>
+          new Promise<WritableStream<Uint8Array>>((resolve) => {
+            resolveOpen = resolve;
+          })
+      );
+      const { pair, session, finish } = await makeFillHarness({ reliableReset, openFillStream });
+      const track = session.registerTrack({
+        trackNamespace: NAMESPACE,
+        trackName: 'video',
+        getLargestObject: () => ({ group: 4, object: 2 }),
+        getStreamCount: () => 3,
+      });
+      const sub = await rawSubscribe(pair.server, 'video', 245);
+
+      await vi.waitFor(() => expect(sub.received[0]?.kind).toBe('subscribe-ok'));
+      await sub.send(encodeRequestUpdate(247, { fillParameters: {} }));
+      await vi.waitFor(() => expect(openFillStream).toHaveBeenCalledOnce());
+
+      // The track ends while the fill's stream is still opening.
+      track.end();
+      await vi.waitFor(() => expect(sub.ended()).toBe(true));
+
+      const write = vi.fn();
+      const abort = vi.fn();
+
+      resolveOpen(new WritableStream<Uint8Array>({ write, abort }));
+      await vi.waitFor(() => expect(abort).toHaveBeenCalledOnce());
+
+      // A fill is counted in the same step that commits it to its
+      // FETCH_HEADER, as the track publisher counts subgroup streams.
+      // This one opened after PUBLISH_DONE, so it gets no header and is
+      // reset bare: the peer cannot attribute it to the subscription, so
+      // leaving it out of the count cannot put the peer over it.
+      expect(write).not.toHaveBeenCalled();
+      expect(sub.received.at(-1)).toMatchObject({
+        kind: 'publish-done',
+        statusCode: PUBLISH_DONE_STATUS.TRACK_ENDED,
+        streamCount: 3,
+      });
+      await finish();
+    }
+  );
+
   it("serves a relay's second pull of a live track without reliable reset support", async () => {
     const bindings: (number | undefined)[] = [];
     const { pair, session, fills, finish } = await makeFillHarness({
